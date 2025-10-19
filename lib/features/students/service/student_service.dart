@@ -86,4 +86,29 @@ class StudentService {
       rethrow;
     }
   }
+
+  static Future<void> bulkInsertStudents(List<StudentModel> students) async {
+    try {
+      print(
+        'StudentService: Starting bulk insert of ${students.length} students',
+      );
+      final db = await DatabaseService.database;
+
+      // Use batch for efficient bulk insert
+      final batch = db.batch();
+
+      for (final student in students) {
+        batch.insert('students', student.toJson());
+      }
+
+      await batch.commit(noResult: true);
+      print(
+        'StudentService: Successfully bulk inserted ${students.length} students',
+      );
+    } catch (e, stackTrace) {
+      print('StudentService: Error bulk inserting students: $e');
+      print('StudentService: Stack trace: $stackTrace');
+      rethrow;
+    }
+  }
 }

@@ -105,19 +105,27 @@ class _NewAdmissionViewState extends State<NewAdmissionView> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'New Student Admission',
-                  style: GoogleFonts.poppins(
-                    fontSize: 20.sp,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                Obx(
+                  () => Text(
+                    controller.isEditMode.value
+                        ? 'Edit Student'
+                        : 'New Student Admission',
+                    style: GoogleFonts.poppins(
+                      fontSize: 20.sp,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
-                Text(
-                  'Complete the 4-step process to add a new student',
-                  style: GoogleFonts.poppins(
-                    fontSize: 12.sp,
-                    color: Colors.white.withOpacity(0.8),
+                Obx(
+                  () => Text(
+                    controller.isEditMode.value
+                        ? 'Update student information'
+                        : 'Complete the 4-step process to add a new student',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12.sp,
+                      color: Colors.white.withOpacity(0.8),
+                    ),
                   ),
                 ),
               ],
@@ -269,14 +277,18 @@ class _NewAdmissionViewState extends State<NewAdmissionView> {
                     borderRadius: BorderRadius.circular(12.r),
                   ),
                 ),
-                child: Text(
-                  controller.currentStep.value == controller.totalSteps - 1
-                      ? 'Confirm & Submit'
-                      : 'Next',
-                  style: GoogleFonts.poppins(
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.white,
+                child: Obx(
+                  () => Text(
+                    controller.currentStep.value == controller.totalSteps - 1
+                        ? (controller.isEditMode.value
+                              ? 'Update Student'
+                              : 'Confirm & Submit')
+                        : 'Next',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ),

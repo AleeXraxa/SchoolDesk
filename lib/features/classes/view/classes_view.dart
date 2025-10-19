@@ -103,52 +103,55 @@ class ClassesView extends GetView<ClassesController> {
                   ),
                 ),
                 SizedBox(width: 16.w),
-                // New Admission Button
-                TweenAnimationBuilder<double>(
-                  tween: Tween(begin: 0.0, end: 1.0),
-                  duration: const Duration(milliseconds: 800),
-                  builder: (context, scale, child) {
-                    return Transform.scale(
-                      scale: scale,
-                      child: ElevatedButton.icon(
-                        onPressed: () => _showNewClassDialog(Get.context!),
-                        icon: Icon(Icons.add, size: 18.sp),
-                        label: Text(
-                          'Add New Class',
-                          style: GoogleFonts.poppins(
-                            fontSize: 14.sp,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        style:
-                            ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primary,
-                              foregroundColor: Colors.white,
-                              elevation: 2,
-                              padding: EdgeInsets.symmetric(
-                                horizontal: 28.w,
-                                vertical: 14.h,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12.r),
-                              ),
-                              shadowColor: AppColors.primary.withOpacity(0.3),
-                            ).copyWith(
-                              elevation:
-                                  MaterialStateProperty.resolveWith<double>((
-                                    Set<MaterialState> states,
-                                  ) {
-                                    if (states.contains(
-                                      MaterialState.hovered,
-                                    )) {
-                                      return 4;
-                                    }
-                                    return 2;
-                                  }),
+                // New Class Button - Right aligned
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TweenAnimationBuilder<double>(
+                    tween: Tween(begin: 0.0, end: 1.0),
+                    duration: const Duration(milliseconds: 800),
+                    builder: (context, scale, child) {
+                      return Transform.scale(
+                        scale: scale,
+                        child: ElevatedButton.icon(
+                          onPressed: () => _showNewClassDialog(Get.context!),
+                          icon: Icon(Icons.add, size: 18.sp),
+                          label: Text(
+                            'Add New Class',
+                            style: GoogleFonts.poppins(
+                              fontSize: 14.sp,
+                              fontWeight: FontWeight.w600,
                             ),
-                      ),
-                    );
-                  },
+                          ),
+                          style:
+                              ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                foregroundColor: Colors.white,
+                                elevation: 2,
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 28.w,
+                                  vertical: 14.h,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12.r),
+                                ),
+                                shadowColor: AppColors.primary.withOpacity(0.3),
+                              ).copyWith(
+                                elevation:
+                                    MaterialStateProperty.resolveWith<double>((
+                                      Set<MaterialState> states,
+                                    ) {
+                                      if (states.contains(
+                                        MaterialState.hovered,
+                                      )) {
+                                        return 4;
+                                      }
+                                      return 2;
+                                    }),
+                              ),
+                        ),
+                      );
+                    },
+                  ),
                 ),
               ],
             ),

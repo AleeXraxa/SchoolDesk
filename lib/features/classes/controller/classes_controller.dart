@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import '../../../widgets/result_dialog.dart';
 import '../model/class_model.dart';
 import '../service/class_service.dart';
+import '../view/class_details_view.dart';
 
 class ClassesController extends GetxController {
   RxBool isLoading = true.obs;
@@ -145,11 +146,13 @@ class ClassesController extends GetxController {
 
   void viewClass(int? id) {
     if (id == null) return;
-    Get.snackbar(
-      'View Class',
-      'Viewing details for class ID: $id',
-      snackPosition: SnackPosition.BOTTOM,
-    );
+    final classItem = classes.firstWhereOrNull((item) => item.id == id);
+    if (classItem != null) {
+      Get.dialog(
+        ClassDetailsView(classItem: classItem),
+        barrierDismissible: true,
+      );
+    }
   }
 
   void editClass(int? id) {

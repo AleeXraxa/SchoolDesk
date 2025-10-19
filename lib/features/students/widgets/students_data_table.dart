@@ -229,7 +229,7 @@ class StudentsDataTable extends GetView<StudentsController> {
                                       ),
                                       IconButton(
                                         onPressed: () => controller
-                                            .deleteStudent(student.rollNo),
+                                            .deleteStudent(student.id!),
                                         icon: Icon(
                                           Icons.delete,
                                           color: Colors.red,

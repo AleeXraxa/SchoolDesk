@@ -55,189 +55,54 @@ class StudentsView extends GetView<StudentsController> {
                     color: Colors.black87,
                   ),
                 ),
-                const Spacer(),
-                // Search Bar
-                Flexible(
-                  child: Container(
-                    width: 320.w,
-                    height: 48.h,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[50],
-                      borderRadius: BorderRadius.circular(24.r),
-                      border: Border.all(color: Colors.grey[200]!),
-                    ),
-                    child: Obx(
-                      () => TextField(
-                        controller:
-                            TextEditingController(
-                                text: controller.searchQuery.value,
-                              )
-                              ..selection = TextSelection.collapsed(
-                                offset: controller.searchQuery.value.length,
-                              ),
-                        onChanged: controller.updateSearchQuery,
-                        decoration: InputDecoration(
-                          hintText: 'Search students...',
-                          hintStyle: GoogleFonts.poppins(
-                            color: Colors.grey[500],
+                // Bulk Insert Button
+                TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 0.0, end: 1.0),
+                  duration: const Duration(milliseconds: 800),
+                  builder: (context, scale, child) {
+                    return Transform.scale(
+                      scale: scale,
+                      child: ElevatedButton.icon(
+                        onPressed: () => controller.bulkInsertSampleStudents(),
+                        icon: Icon(Icons.add_circle, size: 18.sp),
+                        label: Text(
+                          'Add 100 Sample Students',
+                          style: GoogleFonts.poppins(
                             fontSize: 14.sp,
-                          ),
-                          prefixIcon: Icon(
-                            Icons.search,
-                            color: Colors.grey[500],
-                            size: 20.sp,
-                          ),
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(
-                            horizontal: 20.w,
-                            vertical: 14.h,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
-                        style: GoogleFonts.poppins(
-                          fontSize: 14.sp,
-                          color: Colors.black87,
-                        ),
+                        style:
+                            ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green[600],
+                              foregroundColor: Colors.white,
+                              elevation: 2,
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 28.w,
+                                vertical: 14.h,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12.r),
+                              ),
+                              shadowColor: Colors.green[200],
+                            ).copyWith(
+                              elevation:
+                                  MaterialStateProperty.resolveWith<double>((
+                                    Set<MaterialState> states,
+                                  ) {
+                                    if (states.contains(
+                                      MaterialState.hovered,
+                                    )) {
+                                      return 4;
+                                    }
+                                    return 2;
+                                  }),
+                            ),
                       ),
-                    ),
-                  ),
+                    );
+                  },
                 ),
                 SizedBox(width: 16.w),
-                // Filter Buttons
-                Obx(
-                  () => Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Class Filter
-                      Container(
-                        height: 48.h,
-                        padding: EdgeInsets.symmetric(horizontal: 16.w),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[50],
-                          borderRadius: BorderRadius.circular(12.r),
-                          border: Border.all(color: Colors.grey[200]!),
-                        ),
-                        child: Obx(
-                          () => DropdownButton<String>(
-                            value: controller.filters['class']?.isEmpty ?? true
-                                ? null
-                                : controller.filters['class'],
-                            hint: Text(
-                              'Filter by Class',
-                              style: GoogleFonts.poppins(
-                                color: Colors.grey[600],
-                                fontSize: 14.sp,
-                              ),
-                            ),
-                            underline: const SizedBox(),
-                            icon: Icon(
-                              Icons.filter_list,
-                              size: 20.sp,
-                              color: Colors.grey[500],
-                            ),
-                            items: [
-                              DropdownMenuItem<String>(
-                                value: '',
-                                child: Text(
-                                  'All Classes',
-                                  style: GoogleFonts.poppins(fontSize: 14.sp),
-                                ),
-                              ),
-                              ...controller.getUniqueValues('class').map((
-                                className,
-                              ) {
-                                return DropdownMenuItem<String>(
-                                  value: className,
-                                  child: Text(
-                                    className,
-                                    style: GoogleFonts.poppins(fontSize: 14.sp),
-                                  ),
-                                );
-                              }),
-                            ],
-                            onChanged: (value) =>
-                                controller.updateFilter('class', value ?? ''),
-                          ),
-                        ),
-                      ),
-                      SizedBox(width: 12.w),
-                      // Status Filter
-                      Container(
-                        height: 48.h,
-                        padding: EdgeInsets.symmetric(horizontal: 16.w),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[50],
-                          borderRadius: BorderRadius.circular(12.r),
-                          border: Border.all(color: Colors.grey[200]!),
-                        ),
-                        child: Obx(
-                          () => DropdownButton<String>(
-                            value: controller.filters['status']?.isEmpty ?? true
-                                ? null
-                                : controller.filters['status'],
-                            hint: Text(
-                              'Filter by Status',
-                              style: GoogleFonts.poppins(
-                                color: Colors.grey[600],
-                                fontSize: 14.sp,
-                              ),
-                            ),
-                            underline: const SizedBox(),
-                            icon: Icon(
-                              Icons.filter_list,
-                              size: 20.sp,
-                              color: Colors.grey[500],
-                            ),
-                            items: [
-                              DropdownMenuItem<String>(
-                                value: '',
-                                child: Text(
-                                  'All Status',
-                                  style: GoogleFonts.poppins(fontSize: 14.sp),
-                                ),
-                              ),
-                              ...controller.getUniqueValues('status').map((
-                                status,
-                              ) {
-                                return DropdownMenuItem<String>(
-                                  value: status,
-                                  child: Text(
-                                    status,
-                                    style: GoogleFonts.poppins(fontSize: 14.sp),
-                                  ),
-                                );
-                              }),
-                            ],
-                            onChanged: (value) =>
-                                controller.updateFilter('status', value ?? ''),
-                          ),
-                        ),
-                      ),
-                      SizedBox(width: 12.w),
-                      // Clear Filters Button
-                      if (controller.filters.isNotEmpty ||
-                          controller.searchQuery.isNotEmpty)
-                        TextButton.icon(
-                          onPressed: controller.clearFilters,
-                          icon: Icon(Icons.clear, size: 18.sp),
-                          label: Text(
-                            'Clear Filters',
-                            style: GoogleFonts.poppins(
-                              fontSize: 14.sp,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          style: TextButton.styleFrom(
-                            foregroundColor: AppColors.primary,
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 16.w,
-                              vertical: 12.h,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-                const Spacer(),
                 // New Admission Button
                 TweenAnimationBuilder<double>(
                   tween: Tween(begin: 0.0, end: 1.0),
@@ -635,8 +500,7 @@ class StudentsView extends GetView<StudentsController> {
                       width: 80.w,
                       height: 32.h,
                       child: ElevatedButton.icon(
-                        onPressed: () =>
-                            controller.deleteStudent(student.rollNo),
+                        onPressed: () => controller.deleteStudent(student.id!),
                         icon: Icon(Icons.delete, size: 14.sp),
                         label: Text(
                           'Delete',

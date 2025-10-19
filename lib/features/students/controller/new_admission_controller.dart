@@ -10,6 +10,10 @@ import '../controller/students_controller.dart';
 import '../../../data/models/student_model.dart';
 
 class NewAdmissionController extends GetxController {
+  // Edit mode management
+  RxBool isEditMode = false.obs;
+  int? editingStudentId;
+
   // Step management
   RxInt currentStep = 0.obs;
   final int totalSteps = 4;
@@ -64,11 +68,13 @@ class NewAdmissionController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    // Set default values
-    dateOfBirth.value = DateTime.now().subtract(
-      const Duration(days: 365 * 6),
-    ); // 6 years ago
-    _updateDateOfBirthInWords();
+    // Set default values only if not in edit mode
+    if (!isEditMode.value) {
+      dateOfBirth.value = DateTime.now().subtract(
+        const Duration(days: 365 * 6),
+      ); // 6 years ago
+      _updateDateOfBirthInWords();
+    }
 
     // Load classes for Step 2
     loadClasses();
@@ -145,6 +151,14 @@ class NewAdmissionController extends GetxController {
   }
 
   Future<void> submitAdmission() async {
+    if (isEditMode.value) {
+      await updateStudent();
+    } else {
+      await createNewStudent();
+    }
+  }
+
+  Future<void> createNewStudent() async {
     try {
       print('NewAdmissionController: Starting admission submission');
 
@@ -301,12 +315,163 @@ class NewAdmissionController extends GetxController {
         resetForm();
       });
     } catch (e, stackTrace) {
-      print('NewAdmissionController: Error during admission: $e');
+      print('NewAdmissionController: Error during student creation: $e');
       print('NewAdmissionController: Stack trace: $stackTrace');
 
       Get.snackbar(
         'Error',
-        'Failed to complete admission: $e',
+        'Failed to create student: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 5),
+      );
+    }
+  }
+
+  Future<void> updateStudent() async {
+    try {
+      print('NewAdmissionController: Starting student update');
+
+      // Check if all forms are available
+      if (personalDetailsFormKey.currentState == null ||
+          classAssignmentFormKey.currentState == null ||
+          feesFormKey.currentState == null) {
+        print('NewAdmissionController: One or more forms not available');
+        Get.snackbar(
+          'Error',
+          'Form not ready. Please reopen edit form.',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+        return;
+      }
+
+      // Validate all forms
+      bool personalValid =
+          personalDetailsFormKey.currentState?.validate() ?? false;
+      bool classValid =
+          classAssignmentFormKey.currentState?.validate() ?? false;
+      bool feesValid = feesFormKey.currentState?.validate() ?? false;
+
+      if (!personalValid) {
+        print('NewAdmissionController: Personal details validation failed');
+        Get.snackbar(
+          'Validation Error',
+          'Please complete all personal details',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+        goToStep(0);
+        return;
+      }
+
+      if (!classValid) {
+        print('NewAdmissionController: Class assignment validation failed');
+        Get.snackbar(
+          'Validation Error',
+          'Please select a class and section',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+        goToStep(1);
+        return;
+      }
+
+      if (!feesValid) {
+        print('NewAdmissionController: Fees validation failed');
+        Get.snackbar(
+          'Validation Error',
+          'Please enter valid fee amounts',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+        goToStep(2);
+        return;
+      }
+
+      print('NewAdmissionController: All validations passed');
+
+      // Find the class ID for the selected class and section
+      final selectedClassObj = availableClasses.firstWhere(
+        (classItem) =>
+            classItem.className == selectedClass.value &&
+            classItem.section == selectedSection.value,
+        orElse: () => throw Exception('Selected class not found'),
+      );
+
+      // Create updated student model
+      final updatedStudent = StudentModel(
+        id: editingStudentId,
+        rollNo: rollNoController.text.trim(),
+        grNo: grNoController.text.trim(),
+        studentName: studentNameController.text.trim(),
+        fatherName: fatherNameController.text.trim(),
+        caste: casteController.text.trim(),
+        placeOfBirth: placeOfBirthController.text.trim(),
+        dobFigures:
+            dateOfBirth.value ??
+            DateTime.now().subtract(const Duration(days: 365 * 6)),
+        dobWords: dateOfBirthInWords.value,
+        gender: selectedGender.value,
+        religion: selectedReligion.value,
+        fatherContact: fathersContactController.text.trim(),
+        motherContact: mothersContactController.text.trim(),
+        address: addressController.text.trim(),
+        admissionDate: DateTime.now(), // Keep original admission date
+        classId: selectedClassObj.id,
+        className: selectedClass.value,
+        section: selectedSection.value,
+        admissionFees: double.parse(admissionFeesController.text),
+        monthlyFees: double.parse(monthlyFeesController.text),
+      );
+
+      print(
+        'NewAdmissionController: Created updated student model: ${updatedStudent.studentName}',
+      );
+
+      // Update in database
+      final success = await StudentService.updateStudent(updatedStudent);
+      if (!success) {
+        throw Exception('Failed to update student in database');
+      }
+
+      print('NewAdmissionController: Student updated successfully');
+
+      // Close dialog
+      Get.back();
+
+      // Show success dialog
+      Future.delayed(const Duration(milliseconds: 300), () {
+        ResultDialog.showSuccess(
+          Get.context!,
+          title: '✏️ Student Updated Successfully!',
+          message:
+              'Student ${updatedStudent.studentName} information has been updated successfully.',
+        );
+      });
+
+      // Refresh lists and reset form
+      Future.delayed(const Duration(seconds: 2), () {
+        // Refresh student list if controller exists
+        if (Get.isRegistered<StudentsController>()) {
+          final studentsController = Get.find<StudentsController>();
+          studentsController.refreshStudents();
+        }
+
+        resetForm();
+      });
+    } catch (e, stackTrace) {
+      print('NewAdmissionController: Error during student update: $e');
+      print('NewAdmissionController: Stack trace: $stackTrace');
+
+      Get.snackbar(
+        'Error',
+        'Failed to update student: $e',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
         colorText: Colors.white,
@@ -394,6 +559,10 @@ class NewAdmissionController extends GetxController {
   void resetForm() {
     currentStep.value = 0;
 
+    // Reset edit mode
+    isEditMode.value = false;
+    editingStudentId = null;
+
     // Clear all controllers
     rollNoController.clear();
     grNoController.clear();
@@ -416,6 +585,39 @@ class NewAdmissionController extends GetxController {
     selectedSection.value = '';
 
     _updateDateOfBirthInWords();
+  }
+
+  void loadStudentForEdit(StudentModel student) {
+    isEditMode.value = true;
+    editingStudentId = student.id;
+
+    // Load personal details
+    rollNoController.text = student.rollNo;
+    grNoController.text = student.grNo;
+    studentNameController.text = student.studentName;
+    fatherNameController.text = student.fatherName;
+    casteController.text = student.caste;
+    placeOfBirthController.text = student.placeOfBirth;
+    addressController.text = student.address;
+    fathersContactController.text = student.fatherContact;
+    mothersContactController.text = student.motherContact;
+
+    // Load date of birth
+    dateOfBirth.value = student.dobFigures;
+    _updateDateOfBirthInWords();
+
+    // Load dropdown values
+    selectedGender.value = student.gender;
+    selectedReligion.value = student.religion;
+    selectedClass.value = student.className;
+    selectedSection.value = student.section;
+
+    // Load fees
+    admissionFeesController.text = student.admissionFees.toString();
+    monthlyFeesController.text = student.monthlyFees.toString();
+
+    // Update section options for the selected class
+    onClassChanged(student.className);
   }
 
   // Validation methods
