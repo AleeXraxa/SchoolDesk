@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../../../core/app_routes.dart';
 import '../../../data/models/user_model.dart';
 import '../../../widgets/loading_dialog.dart';
 import '../../../widgets/result_dialog.dart';
@@ -118,8 +119,10 @@ class LoginController extends GetxController {
           );
         }
 
-        // Navigate to next screen based on user role
-        // Get.offAllNamed('/dashboard');
+        // Navigate to dashboard after a short delay
+        Future.delayed(const Duration(seconds: 2), () {
+          Get.offAllNamed(AppRoutes.dashboard, arguments: user);
+        });
       } else {
         // Show error dialog
         if (context != null) {

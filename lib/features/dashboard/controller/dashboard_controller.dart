@@ -13,9 +13,6 @@ class DashboardController extends GetxController {
   var dashboardStats = Rx<DashboardStatsModel?>(null);
   var isLoadingStats = false.obs;
 
-  // Quick actions
-  var selectedMenuIndex = 0.obs;
-
   @override
   void onInit() {
     super.onInit();
@@ -48,22 +45,7 @@ class DashboardController extends GetxController {
     }
   }
 
-  void selectMenuItem(int index) {
-    selectedMenuIndex.value = index;
-  }
-
   void logout() {
     Get.offAllNamed('/login');
   }
-
-  // Menu items for navigation
-  List<Map<String, dynamic>> get menuItems => [
-    {'icon': 'dashboard', 'title': 'Dashboard', 'route': '/dashboard'},
-    {'icon': 'students', 'title': 'Students', 'route': '/students'},
-    {'icon': 'teachers', 'title': 'Teachers', 'route': '/teachers'},
-    {'icon': 'classes', 'title': 'Classes', 'route': '/classes'},
-    {'icon': 'subjects', 'title': 'Subjects', 'route': '/subjects'},
-    {'icon': 'reports', 'title': 'Reports', 'route': '/reports'},
-    {'icon': 'settings', 'title': 'Settings', 'route': '/settings'},
-  ];
 }

@@ -53,6 +53,9 @@ dependencies:
   # Google Fonts
   google_fonts: ^6.2.1
 
+  # Enhanced Data Table
+  data_table_2: ^2.5.10
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
