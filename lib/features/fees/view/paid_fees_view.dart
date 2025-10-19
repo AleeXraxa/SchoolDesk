@@ -7,14 +7,9 @@ import '../../../core/theme/app_colors.dart';
 import '../controller/admission_fees_controller.dart';
 import '../../../data/models/aggregated_student_payment_model.dart';
 
-class PaidFeesView extends StatefulWidget {
+class PaidFeesView extends StatelessWidget {
   const PaidFeesView({super.key});
 
-  @override
-  State<PaidFeesView> createState() => _PaidFeesViewState();
-}
-
-class _PaidFeesViewState extends State<PaidFeesView> {
   @override
   Widget build(BuildContext context) {
     // Ensure controller is available with error handling
