@@ -8,6 +8,8 @@ import '../../classes/controller/classes_controller.dart';
 import '../service/student_service.dart';
 import '../controller/students_controller.dart';
 import '../../../data/models/student_model.dart';
+import '../../fees/service/admission_fees_service.dart';
+import '../../fees/controller/admission_fees_controller.dart';
 
 class NewAdmissionController extends GetxController {
   // Edit mode management
@@ -273,6 +275,22 @@ class NewAdmissionController extends GetxController {
       final studentId = await StudentService.addStudent(student);
       print('NewAdmissionController: Student saved with ID: $studentId');
 
+      // Create admission fee record automatically
+      try {
+        await AdmissionFeesService.createAdmissionFeeForStudent(
+          studentId,
+          student.admissionFees,
+        );
+        print(
+          'NewAdmissionController: Admission fee record created for student ID: $studentId',
+        );
+      } catch (e) {
+        print(
+          'NewAdmissionController: Failed to create admission fee record: $e',
+        );
+        // Don't fail the entire admission process for this
+      }
+
       // Update class total students count
       if (selectedClassObj.id != null) {
         final newCount = selectedClassObj.totalStudents + 1;
@@ -310,6 +328,12 @@ class NewAdmissionController extends GetxController {
         if (Get.isRegistered<ClassesController>()) {
           final classesController = Get.find<ClassesController>();
           classesController.fetchClasses();
+        }
+
+        // Refresh admission fees if controller exists
+        if (Get.isRegistered<AdmissionFeesController>()) {
+          final admissionFeesController = Get.find<AdmissionFeesController>();
+          admissionFeesController.fetchAdmissionFees();
         }
 
         resetForm();

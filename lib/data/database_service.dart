@@ -31,9 +31,10 @@ class DatabaseService {
       final db = await databaseFactory.openDatabase(
         dbPath,
         options: OpenDatabaseOptions(
-          version: 2,
+          version: 3,
           onCreate: _onCreate,
           onUpgrade: _onUpgrade,
+          onOpen: _onOpen,
         ),
       );
 
@@ -163,9 +164,64 @@ class DatabaseService {
         print('DatabaseService: Students table created/verified');
       }
 
+      if (oldVersion < 3) {
+        print('DatabaseService: Creating admission_fees table for version 3');
+
+        // Create admission_fees table
+        await db.execute('''
+          CREATE TABLE admission_fees (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            student_id INTEGER NOT NULL,
+            amount_due REAL NOT NULL DEFAULT 0.00,
+            amount_paid REAL NOT NULL DEFAULT 0.00,
+            status TEXT NOT NULL DEFAULT 'Pending',
+            due_date TEXT,
+            payment_date TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE
+          )
+        ''');
+        print('DatabaseService: Admission fees table created');
+      }
+
       print('DatabaseService: Database upgrade completed');
     } catch (e, stackTrace) {
       print('DatabaseService: Error during database upgrade: $e');
+      print('DatabaseService: Stack trace: $stackTrace');
+      rethrow;
+    }
+  }
+
+  static Future<void> _onOpen(Database db) async {
+    try {
+      print('DatabaseService: Database opened, checking for missing tables...');
+
+      // Check if admission_fees table exists, create if not
+      final tables = await db.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='admission_fees'",
+      );
+
+      if (tables.isEmpty) {
+        print('DatabaseService: Creating admission_fees table...');
+        await db.execute('''
+          CREATE TABLE admission_fees (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            student_id INTEGER NOT NULL,
+            amount_due REAL NOT NULL DEFAULT 0.00,
+            amount_paid REAL NOT NULL DEFAULT 0.00,
+            status TEXT NOT NULL DEFAULT 'Pending',
+            due_date TEXT,
+            payment_date TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE
+          )
+        ''');
+        print('DatabaseService: Admission fees table created');
+      }
+    } catch (e, stackTrace) {
+      print('DatabaseService: Error during database open: $e');
       print('DatabaseService: Stack trace: $stackTrace');
       rethrow;
     }
