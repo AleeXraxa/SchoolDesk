@@ -3,11 +3,17 @@ import 'package:get/get.dart';
 import '../../../widgets/result_dialog.dart';
 import '../service/admission_fees_service.dart';
 import '../../../data/models/admission_fee_model.dart';
+import '../../../data/models/paid_admission_fee_model.dart';
+import '../../../data/models/aggregated_student_payment_model.dart';
 
 class AdmissionFeesController extends GetxController {
   RxBool isLoading = true.obs;
   RxList<AdmissionFeeModel> pendingFees = <AdmissionFeeModel>[].obs;
   RxList<AdmissionFeeModel> paidFees = <AdmissionFeeModel>[].obs;
+  RxList<PaidAdmissionFeeModel> paidAdmissionFeeEntries =
+      <PaidAdmissionFeeModel>[].obs;
+  RxList<AggregatedStudentPaymentModel> aggregatedStudentPayments =
+      <AggregatedStudentPaymentModel>[].obs;
   RxString searchQuery = ''.obs;
 
   @override
@@ -21,9 +27,28 @@ class AdmissionFeesController extends GetxController {
       isLoading.value = true;
       final pending = await AdmissionFeesService.getPendingAdmissionFees();
       final paid = await AdmissionFeesService.getPaidAdmissionFees();
+      final paidEntries = await AdmissionFeesService.getAllPaidAdmissionFees();
 
       pendingFees.value = pending;
       paidFees.value = paid;
+      paidAdmissionFeeEntries.value = paidEntries;
+
+      // Aggregate payments by student
+      final Map<int, List<PaidAdmissionFeeModel>> paymentsByStudent = {};
+      for (final entry in paidEntries) {
+        if (!paymentsByStudent.containsKey(entry.studentId)) {
+          paymentsByStudent[entry.studentId] = [];
+        }
+        paymentsByStudent[entry.studentId]!.add(entry);
+      }
+
+      final aggregatedPayments = paymentsByStudent.values
+          .map(
+            (payments) => AggregatedStudentPaymentModel.fromPayments(payments),
+          )
+          .toList();
+
+      aggregatedStudentPayments.value = aggregatedPayments;
     } catch (e) {
       Get.snackbar(
         'Error',
@@ -49,13 +74,36 @@ class AdmissionFeesController extends GetxController {
   Future<void> fetchPaidFees() async {
     try {
       final paid = await AdmissionFeesService.getPaidAdmissionFees();
+      final paidEntries = await AdmissionFeesService.getAllPaidAdmissionFees();
       paidFees.value = paid;
+      paidAdmissionFeeEntries.value = paidEntries;
+
+      // Aggregate payments by student
+      final Map<int, List<PaidAdmissionFeeModel>> paymentsByStudent = {};
+      for (final entry in paidEntries) {
+        if (!paymentsByStudent.containsKey(entry.studentId)) {
+          paymentsByStudent[entry.studentId] = [];
+        }
+        paymentsByStudent[entry.studentId]!.add(entry);
+      }
+
+      final aggregatedPayments = paymentsByStudent.values
+          .map(
+            (payments) => AggregatedStudentPaymentModel.fromPayments(payments),
+          )
+          .toList();
+
+      aggregatedStudentPayments.value = aggregatedPayments;
     } catch (e) {
       print('Error fetching paid fees: $e');
     }
   }
 
-  Future<void> processPayment(int feeId, double paymentAmount) async {
+  Future<bool> processPayment(
+    int feeId,
+    double paymentAmount, {
+    String modeOfPayment = 'Cash',
+  }) async {
     try {
       // Validate payment amount
       if (paymentAmount <= 0) {
@@ -64,7 +112,7 @@ class AdmissionFeesController extends GetxController {
           title: 'Invalid Payment Amount',
           message: 'Payment amount must be greater than 0.',
         );
-        return;
+        return false;
       }
 
       // Get current fee to validate
@@ -75,7 +123,7 @@ class AdmissionFeesController extends GetxController {
           title: 'Fee Not Found',
           message: 'The admission fee record was not found.',
         );
-        return;
+        return false;
       }
 
       // Check if payment amount exceeds remaining amount
@@ -85,31 +133,27 @@ class AdmissionFeesController extends GetxController {
           title: 'Invalid Payment Amount',
           message: 'Payment amount cannot exceed the remaining amount due.',
         );
-        return;
+        return false;
       }
 
-      // Process payment
-      final success = await AdmissionFeesService.processPayment(
+      // Process payment with selected mode of payment
+      final success = await AdmissionFeesService.processPartialPayment(
         feeId,
         paymentAmount,
+        modeOfPayment,
       );
 
       if (success) {
         // Refresh data
         await fetchAdmissionFees();
-
-        // Show success dialog
-        ResultDialog.showSuccess(
-          Get.context!,
-          title: 'Payment Successful!',
-          message: 'The admission fee payment has been processed successfully.',
-        );
+        return true;
       } else {
         ResultDialog.showError(
           Get.context!,
           title: 'Payment Failed',
           message: 'Failed to process the payment. Please try again.',
         );
+        return false;
       }
     } catch (e) {
       ResultDialog.showError(
@@ -117,6 +161,7 @@ class AdmissionFeesController extends GetxController {
         title: 'Payment Error',
         message: 'An error occurred while processing the payment: $e',
       );
+      return false;
     }
   }
 

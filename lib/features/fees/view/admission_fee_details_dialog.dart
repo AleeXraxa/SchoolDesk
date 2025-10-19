@@ -3,7 +3,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_colors.dart';
-import '../controller/admission_fees_controller.dart';
 import '../../../data/models/admission_fee_model.dart';
 
 class AdmissionFeeDetailsDialog extends StatefulWidget {
@@ -428,22 +427,21 @@ class _AdmissionFeeDetailsDialogState extends State<AdmissionFeeDetailsDialog>
   Widget _buildActionButtons() {
     return SizedBox(
       width: double.infinity,
-      child: ElevatedButton(
+      child: OutlinedButton(
         onPressed: _closeDialog,
-        style: ElevatedButton.styleFrom(
+        style: OutlinedButton.styleFrom(
           padding: EdgeInsets.symmetric(vertical: 12.h),
-          backgroundColor: AppColors.primary,
-          foregroundColor: Colors.white,
+          side: BorderSide(color: Colors.grey[300]!),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8.r),
           ),
-          elevation: 2,
         ),
         child: Text(
           'Close',
           style: GoogleFonts.poppins(
             fontSize: 14.sp,
             fontWeight: FontWeight.w600,
+            color: Colors.grey[700],
           ),
         ),
       ),

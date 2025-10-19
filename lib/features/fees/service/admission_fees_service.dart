@@ -1,5 +1,7 @@
 import '../../../data/database_service.dart';
 import '../../../data/models/admission_fee_model.dart';
+import '../../../data/models/paid_admission_fee_model.dart';
+import 'paid_admission_fees_service.dart';
 
 class AdmissionFeesService {
   static Future<int> addAdmissionFee(AdmissionFeeModel fee) async {
@@ -133,7 +135,11 @@ class AdmissionFeesService {
     }
   }
 
-  static Future<bool> processPayment(int feeId, double paymentAmount) async {
+  static Future<bool> processPartialPayment(
+    int feeId,
+    double paymentAmount,
+    String modeOfPayment,
+  ) async {
     try {
       final db = await DatabaseService.database;
 
@@ -146,9 +152,14 @@ class AdmissionFeesService {
         throw Exception('Payment amount cannot exceed remaining balance');
       }
 
+      // Validate payment amount is positive
+      if (paymentAmount <= 0) {
+        throw Exception('Payment amount must be greater than zero');
+      }
+
       // Calculate new amounts
       final newAmountPaid = currentFee.amountPaid + paymentAmount;
-      final newRemainingAmount = currentFee.amountDue - newAmountPaid;
+      final newRemainingAmount = currentFee.admissionFeeTotal - newAmountPaid;
 
       // Ensure remaining amount never goes negative
       final finalRemainingAmount = newRemainingAmount < 0
@@ -159,24 +170,34 @@ class AdmissionFeesService {
       final newStatus = finalRemainingAmount <= 0 ? 'Paid' : 'Pending';
       final paymentDate = DateTime.now();
 
-      // Update fee - amount_due remains the original admission fee amount
-      // remainingAmount is calculated as amountDue - amountPaid
-      final result = await db.update(
-        'admission_fees',
-        {
-          'amount_paid': newAmountPaid,
-          // amount_due stays the same (original admission fee)
-          'status': newStatus,
-          'payment_date': paymentDate.toIso8601String(),
-          'updated_at': paymentDate.toIso8601String(),
-        },
-        where: 'id = ?',
-        whereArgs: [feeId],
-      );
+      // Use transaction to ensure data consistency
+      await db.transaction((txn) async {
+        // 1. Insert payment record into paid_admission_fees table
+        final paymentRecord = PaidAdmissionFeeModel(
+          studentId: currentFee.studentId,
+          amountPaid: paymentAmount,
+          paymentDate: paymentDate,
+          modeOfPayment: modeOfPayment,
+          createdAt: paymentDate,
+        );
+        await txn.insert('paid_admission_fees', paymentRecord.toJson());
 
-      return result > 0;
+        // 2. Update admission_fees table
+        await txn.update(
+          'admission_fees',
+          {
+            'amount_paid': newAmountPaid,
+            'status': newStatus,
+            'updated_at': paymentDate.toIso8601String(),
+          },
+          where: 'id = ?',
+          whereArgs: [feeId],
+        );
+      });
+
+      return true;
     } catch (e, stackTrace) {
-      print('AdmissionFeesService: Error processing payment: $e');
+      print('AdmissionFeesService: Error processing partial payment: $e');
       print('AdmissionFeesService: Stack trace: $stackTrace');
       rethrow;
     }
@@ -203,21 +224,60 @@ class AdmissionFeesService {
     double admissionFeeAmount,
   ) async {
     try {
-      final dueDate = DateTime.now().add(const Duration(days: 30));
+      // Check if admission fee already exists for this student
+      final existingFees = await getAdmissionFeesByStudentId(studentId);
+      if (existingFees.isNotEmpty) {
+        print(
+          'AdmissionFeesService: Admission fee already exists for student ID: $studentId',
+        );
+        return; // Don't create duplicate
+      }
+
       final fee = AdmissionFeeModel(
         studentId: studentId,
         amountDue: admissionFeeAmount,
         amountPaid: 0.0,
         status: 'Pending',
-        dueDate: dueDate,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
       await addAdmissionFee(fee);
+      print(
+        'AdmissionFeesService: Successfully created admission fee for student ID: $studentId',
+      );
     } catch (e, stackTrace) {
       print(
         'AdmissionFeesService: Error creating admission fee for student: $e',
       );
+      print('AdmissionFeesService: Stack trace: $stackTrace');
+      rethrow;
+    }
+  }
+
+  static Future<List<PaidAdmissionFeeModel>> getPaymentHistoryByStudentId(
+    int studentId,
+  ) async {
+    return PaidAdmissionFeesService.getPaymentsByStudentId(studentId);
+  }
+
+  static Future<double> getTotalPaidByStudentId(int studentId) async {
+    return PaidAdmissionFeesService.getTotalPaidByStudentId(studentId);
+  }
+
+  static Future<List<PaidAdmissionFeeModel>> getAllPaidAdmissionFees() async {
+    try {
+      final db = await DatabaseService.database;
+      final result = await db.rawQuery('''
+        SELECT paf.*, s.student_name, s.roll_no, s.admission_date
+        FROM paid_admission_fees paf
+        LEFT JOIN students s ON paf.student_id = s.id
+        ORDER BY paf.payment_date DESC
+      ''');
+      return result
+          .map((json) => PaidAdmissionFeeModel.fromJson(json))
+          .toList();
+    } catch (e, stackTrace) {
+      print('AdmissionFeesService: Error fetching all paid admission fees: $e');
       print('AdmissionFeesService: Stack trace: $stackTrace');
       rethrow;
     }

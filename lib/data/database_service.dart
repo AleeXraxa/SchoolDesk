@@ -31,7 +31,7 @@ class DatabaseService {
       final db = await databaseFactory.openDatabase(
         dbPath,
         options: OpenDatabaseOptions(
-          version: 3,
+          version: 4,
           onCreate: _onCreate,
           onUpgrade: _onUpgrade,
           onOpen: _onOpen,
@@ -175,14 +175,32 @@ class DatabaseService {
             amount_due REAL NOT NULL DEFAULT 0.00,
             amount_paid REAL NOT NULL DEFAULT 0.00,
             status TEXT NOT NULL DEFAULT 'Pending',
-            due_date TEXT,
-            payment_date TEXT,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL,
             FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE
           )
         ''');
         print('DatabaseService: Admission fees table created');
+      }
+
+      if (oldVersion < 4) {
+        print(
+          'DatabaseService: Creating paid_admission_fees table for version 4',
+        );
+
+        // Create paid_admission_fees table for tracking individual payments
+        await db.execute('''
+          CREATE TABLE paid_admission_fees (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            student_id INTEGER NOT NULL,
+            amount_paid REAL NOT NULL,
+            payment_date TEXT NOT NULL,
+            mode_of_payment TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE
+          )
+        ''');
+        print('DatabaseService: Paid admission fees table created');
       }
 
       print('DatabaseService: Database upgrade completed');
@@ -211,14 +229,33 @@ class DatabaseService {
             amount_due REAL NOT NULL DEFAULT 0.00,
             amount_paid REAL NOT NULL DEFAULT 0.00,
             status TEXT NOT NULL DEFAULT 'Pending',
-            due_date TEXT,
-            payment_date TEXT,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL,
             FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE
           )
         ''');
         print('DatabaseService: Admission fees table created');
+      }
+
+      // Check if paid_admission_fees table exists, create if not
+      final paidTables = await db.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='paid_admission_fees'",
+      );
+
+      if (paidTables.isEmpty) {
+        print('DatabaseService: Creating paid_admission_fees table...');
+        await db.execute('''
+          CREATE TABLE paid_admission_fees (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            student_id INTEGER NOT NULL,
+            amount_paid REAL NOT NULL,
+            payment_date TEXT NOT NULL,
+            mode_of_payment TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE
+          )
+        ''');
+        print('DatabaseService: Paid admission fees table created');
       }
     } catch (e, stackTrace) {
       print('DatabaseService: Error during database open: $e');

@@ -4,14 +4,17 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
-import '../controller/fees_controller.dart';
 import '../controller/admission_fees_controller.dart';
-import '../../../data/models/admission_fee_model.dart';
-import 'admission_fee_details_dialog.dart';
+import '../../../data/models/aggregated_student_payment_model.dart';
 
-class PaidFeesView extends StatelessWidget {
+class PaidFeesView extends StatefulWidget {
   const PaidFeesView({super.key});
 
+  @override
+  State<PaidFeesView> createState() => _PaidFeesViewState();
+}
+
+class _PaidFeesViewState extends State<PaidFeesView> {
   @override
   Widget build(BuildContext context) {
     // Ensure controller is available with error handling
@@ -28,9 +31,10 @@ class PaidFeesView extends StatelessWidget {
           );
         }
 
-        final fees = admissionController.getFilteredPaidFees();
+        final aggregatedPayments =
+            admissionController.aggregatedStudentPayments;
 
-        if (fees.isEmpty) {
+        if (aggregatedPayments.isEmpty) {
           return Column(
             children: [
               // Header - Always show header to maintain consistent layout
@@ -112,7 +116,7 @@ class PaidFeesView extends StatelessWidget {
                   ),
                   SizedBox(width: 8.w),
                   Text(
-                    'Paid Admission Fees (${fees.length})',
+                    'Paid Admission Fees (${aggregatedPayments.length})',
                     style: GoogleFonts.poppins(
                       fontSize: 14.sp,
                       fontWeight: FontWeight.w600,
@@ -170,7 +174,7 @@ class PaidFeesView extends StatelessWidget {
                   Expanded(
                     flex: 1,
                     child: Text(
-                      'Admission Fees',
+                      'Amount Paid',
                       style: GoogleFonts.poppins(
                         fontSize: 14.sp,
                         fontWeight: FontWeight.bold,
@@ -182,7 +186,7 @@ class PaidFeesView extends StatelessWidget {
                   Expanded(
                     flex: 1,
                     child: Text(
-                      'Paid Amount',
+                      'Payment Modes',
                       style: GoogleFonts.poppins(
                         fontSize: 14.sp,
                         fontWeight: FontWeight.bold,
@@ -194,7 +198,7 @@ class PaidFeesView extends StatelessWidget {
                   Expanded(
                     flex: 1,
                     child: Text(
-                      'Remaining',
+                      'Payment Date',
                       style: GoogleFonts.poppins(
                         fontSize: 14.sp,
                         fontWeight: FontWeight.bold,
@@ -222,27 +226,34 @@ class PaidFeesView extends StatelessWidget {
             Expanded(
               child: SingleChildScrollView(
                 child: Column(
-                  children: List.generate(fees.length, (index) {
-                    final fee = fees[index];
-                    final isEvenRow = index % 2 == 0;
+                  children: [
+                    // Main aggregated payment records
+                    ...List.generate(aggregatedPayments.length, (index) {
+                      final aggregatedPayment = aggregatedPayments[index];
+                      final isEvenRow = index % 2 == 0;
 
-                    return Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 16.w,
-                        vertical: 10.h,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isEvenRow ? Colors.white : Colors.grey[25],
-                        border: Border(
-                          bottom: BorderSide(
-                            color: Colors.grey[200]!,
-                            width: 0.5,
+                      return Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 16.w,
+                          vertical: 10.h,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isEvenRow ? Colors.white : Colors.grey[25],
+                          border: Border(
+                            bottom: BorderSide(
+                              color: Colors.grey[200]!,
+                              width: 0.5,
+                            ),
                           ),
                         ),
-                      ),
-                      child: Row(children: _buildAdmissionFeeCells(fee)),
-                    );
-                  }),
+                        child: Row(
+                          children: _buildAggregatedPaymentCells(
+                            aggregatedPayment,
+                          ),
+                        ),
+                      );
+                    }),
+                  ],
                 ),
               ),
             ),
@@ -283,11 +294,9 @@ class PaidFeesView extends StatelessWidget {
     }
   }
 
-  void _showAdmissionFeeDetailsDialog(AdmissionFeeModel fee) {
-    Get.dialog(AdmissionFeeDetailsDialog(fee: fee), barrierDismissible: true);
-  }
-
-  List<Widget> _buildAdmissionFeeCells(AdmissionFeeModel fee) {
+  List<Widget> _buildAggregatedPaymentCells(
+    AggregatedStudentPaymentModel aggregatedPayment,
+  ) {
     return [
       Expanded(
         flex: 1,
@@ -298,7 +307,7 @@ class PaidFeesView extends StatelessWidget {
             borderRadius: BorderRadius.circular(6.r),
           ),
           child: Text(
-            fee.rollNo ?? 'N/A',
+            aggregatedPayment.rollNo ?? 'N/A',
             style: GoogleFonts.poppins(
               fontSize: 14.sp,
               fontWeight: FontWeight.w600,
@@ -312,14 +321,36 @@ class PaidFeesView extends StatelessWidget {
         flex: 2,
         child: Padding(
           padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
-          child: Text(
-            fee.studentName ?? 'Unknown Student',
-            style: GoogleFonts.poppins(
-              fontSize: 14.sp,
-              fontWeight: FontWeight.w500,
-              color: Colors.black87,
-            ),
-            overflow: TextOverflow.ellipsis,
+          child: Row(
+            children: [
+              Text(
+                aggregatedPayment.studentName ?? 'Unknown Student',
+                style: GoogleFonts.poppins(
+                  fontSize: 14.sp,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.black87,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+              if (aggregatedPayment.paymentCount > 1) ...[
+                SizedBox(width: 4.w),
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
+                  decoration: BoxDecoration(
+                    color: Colors.purple[100],
+                    borderRadius: BorderRadius.circular(8.r),
+                  ),
+                  child: Text(
+                    '${aggregatedPayment.paymentCount} payments',
+                    style: GoogleFonts.poppins(
+                      fontSize: 10.sp,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.purple[700],
+                    ),
+                  ),
+                ),
+              ],
+            ],
           ),
         ),
       ),
@@ -328,8 +359,10 @@ class PaidFeesView extends StatelessWidget {
         child: Padding(
           padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
           child: Text(
-            fee.createdAt != null
-                ? DateFormat('dd/MM/yyyy').format(fee.createdAt!)
+            aggregatedPayment.admissionDate != null
+                ? DateFormat(
+                    'dd/MM/yyyy',
+                  ).format(aggregatedPayment.admissionDate!)
                 : 'No date',
             style: GoogleFonts.poppins(
               fontSize: 14.sp,
@@ -344,22 +377,7 @@ class PaidFeesView extends StatelessWidget {
         child: Padding(
           padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
           child: Text(
-            'Rs. ${fee.amountDue.toStringAsFixed(0)}',
-            style: GoogleFonts.poppins(
-              fontSize: 14.sp,
-              fontWeight: FontWeight.w600,
-              color: AppColors.primary,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ),
-      ),
-      Expanded(
-        flex: 1,
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
-          child: Text(
-            'Rs. ${fee.amountPaid.toStringAsFixed(0)}',
+            'Rs. ${aggregatedPayment.totalPaidAmount.toStringAsFixed(0)}',
             style: GoogleFonts.poppins(
               fontSize: 14.sp,
               fontWeight: FontWeight.w600,
@@ -374,13 +392,28 @@ class PaidFeesView extends StatelessWidget {
         child: Padding(
           padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
           child: Text(
-            'Rs. ${fee.remainingAmount.toStringAsFixed(0)}',
+            'Multiple',
             style: GoogleFonts.poppins(
-              fontSize: 14.sp,
-              fontWeight: FontWeight.w600,
-              color: fee.remainingAmount == 0
-                  ? Colors.green[700]
-                  : Colors.orange[700],
+              fontSize: 12.sp,
+              fontWeight: FontWeight.w500,
+              color: Colors.grey[600],
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      ),
+      Expanded(
+        flex: 1,
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
+          child: Text(
+            DateFormat(
+              'dd/MM/yyyy',
+            ).format(aggregatedPayment.mostRecentPaymentDate),
+            style: GoogleFonts.poppins(
+              fontSize: 12.sp,
+              fontWeight: FontWeight.w500,
+              color: Colors.black87,
             ),
             textAlign: TextAlign.center,
           ),
@@ -394,35 +427,24 @@ class PaidFeesView extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               IconButton(
-                onPressed: () => _showAdmissionFeeDetailsDialog(fee),
-                icon: Icon(Icons.visibility, size: 20.sp),
+                onPressed: () => _showPaymentDetailsDialog(aggregatedPayment),
+                icon: Icon(Icons.visibility, size: 18.sp),
                 tooltip: 'View Details',
                 color: Colors.blue[600],
                 style: IconButton.styleFrom(
                   backgroundColor: Colors.blue[50],
-                  padding: EdgeInsets.all(8.w),
+                  padding: EdgeInsets.all(6.w),
                 ),
               ),
               SizedBox(width: 4.w),
               IconButton(
                 onPressed: () {},
-                icon: Icon(Icons.receipt, size: 20.sp),
-                tooltip: 'View Receipt',
-                color: Colors.purple[600],
-                style: IconButton.styleFrom(
-                  backgroundColor: Colors.purple[50],
-                  padding: EdgeInsets.all(8.w),
-                ),
-              ),
-              SizedBox(width: 4.w),
-              IconButton(
-                onPressed: () {},
-                icon: Icon(Icons.print, size: 20.sp),
+                icon: Icon(Icons.print, size: 18.sp),
                 tooltip: 'Print Receipt',
                 color: Colors.teal[600],
                 style: IconButton.styleFrom(
                   backgroundColor: Colors.teal[50],
-                  padding: EdgeInsets.all(8.w),
+                  padding: EdgeInsets.all(6.w),
                 ),
               ),
             ],
@@ -430,5 +452,276 @@ class PaidFeesView extends StatelessWidget {
         ),
       ),
     ];
+  }
+
+  void _showPaymentDetailsDialog(
+    AggregatedStudentPaymentModel aggregatedPayment,
+  ) {
+    Get.dialog(
+      Dialog(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        child: TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0.8, end: 1.0),
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.elasticOut,
+          builder: (context, scale, child) {
+            return Transform.scale(
+              scale: scale,
+              child: Container(
+                width: MediaQuery.of(context).size.width > 600 ? 500.w : 450.w,
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.8,
+                ),
+                padding: EdgeInsets.all(24.w),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20.r),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 20,
+                      spreadRadius: 5,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Header
+                    Row(
+                      children: [
+                        Container(
+                          width: 40.w,
+                          height: 40.w,
+                          decoration: BoxDecoration(
+                            color: Colors.blue.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(10.r),
+                          ),
+                          child: Icon(
+                            Icons.receipt_long,
+                            color: Colors.blue[600],
+                            size: 20.sp,
+                          ),
+                        ),
+                        SizedBox(width: 16.w),
+                        Expanded(
+                          child: Text(
+                            'Payment Details',
+                            style: GoogleFonts.poppins(
+                              fontSize: 20.sp,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 20.h),
+
+                    // Student Info
+                    Container(
+                      padding: EdgeInsets.all(16.w),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[50],
+                        borderRadius: BorderRadius.circular(12.r),
+                      ),
+                      child: Column(
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Student Name',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14.sp,
+                                  color: Colors.grey[600],
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              Text(
+                                aggregatedPayment.studentName ?? 'Unknown',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14.sp,
+                                  color: Colors.black87,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 8.h),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Roll No',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14.sp,
+                                  color: Colors.grey[600],
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              Text(
+                                aggregatedPayment.rollNo ?? 'N/A',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14.sp,
+                                  color: Colors.black87,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 8.h),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Total Paid',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14.sp,
+                                  color: Colors.grey[600],
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              Text(
+                                'Rs. ${aggregatedPayment.totalPaidAmount.toStringAsFixed(0)}',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14.sp,
+                                  color: Colors.green[700],
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    SizedBox(height: 20.h),
+
+                    // Individual Payments Header
+                    Text(
+                      'Individual Payments (${aggregatedPayment.paymentCount})',
+                      style: GoogleFonts.poppins(
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    SizedBox(height: 12.h),
+
+                    // Individual Payments List
+                    Flexible(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          border: Border.all(color: Colors.grey[200]!),
+                          borderRadius: BorderRadius.circular(8.r),
+                        ),
+                        child: ListView.separated(
+                          shrinkWrap: true,
+                          itemCount:
+                              aggregatedPayment.individualPayments.length,
+                          separatorBuilder: (context, index) =>
+                              Divider(color: Colors.grey[200], height: 1),
+                          itemBuilder: (context, index) {
+                            final payment =
+                                aggregatedPayment.individualPayments[index];
+                            return Container(
+                              padding: EdgeInsets.all(12.w),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    flex: 2,
+                                    child: Text(
+                                      DateFormat(
+                                        'dd/MM/yyyy HH:mm',
+                                      ).format(payment.paymentDate),
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 12.sp,
+                                        color: Colors.black87,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    flex: 1,
+                                    child: Text(
+                                      'Rs. ${payment.amountPaid.toStringAsFixed(0)}',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 12.sp,
+                                        color: Colors.green[700],
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                  Expanded(
+                                    flex: 2,
+                                    child: Container(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 6.w,
+                                        vertical: 2.h,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.blue[50],
+                                        borderRadius: BorderRadius.circular(
+                                          4.r,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        payment.modeOfPayment,
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 11.sp,
+                                          color: Colors.blue[700],
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+
+                    SizedBox(height: 24.h),
+
+                    // Close Button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 45.h,
+                      child: ElevatedButton(
+                        onPressed: () => Get.back(),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue[600],
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12.r),
+                          ),
+                          elevation: 2,
+                        ),
+                        child: Text(
+                          'Close',
+                          style: GoogleFonts.poppins(
+                            fontSize: 14.sp,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+      barrierDismissible: true,
+    );
   }
 }
