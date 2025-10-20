@@ -188,6 +188,9 @@ class AdmissionFeesService {
           {
             'amount_paid': newAmountPaid,
             'status': newStatus,
+            'payment_date': newStatus == 'Paid'
+                ? paymentDate.toIso8601String()
+                : null,
             'updated_at': paymentDate.toIso8601String(),
           },
           where: 'id = ?',
@@ -238,6 +241,9 @@ class AdmissionFeesService {
         amountDue: admissionFeeAmount,
         amountPaid: 0.0,
         status: 'Pending',
+        dueDate: DateTime.now().add(
+          Duration(days: 30),
+        ), // Default due date 30 days from now
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );

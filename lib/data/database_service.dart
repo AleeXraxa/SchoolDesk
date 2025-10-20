@@ -2,6 +2,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:path/path.dart';
 import 'package:crypto/crypto.dart';
 import 'dart:convert';
+import 'dart:io';
 import '../core/utils/constants.dart';
 
 class DatabaseService {
@@ -19,19 +20,29 @@ class DatabaseService {
       // Initialize FFI
       sqfliteFfiInit();
 
-      // Get database path
-      final databaseFactory = databaseFactoryFfi;
-      final dbPath = join(
-        await databaseFactory.getDatabasesPath(),
-        Constants.dbName,
+      // Set the database factory for sqflite_common_ffi
+      databaseFactory = databaseFactoryFfi;
+
+      // Get the Documents directory of Windows user
+      final documentsDir = Directory(
+        '${Platform.environment['USERPROFILE']}\\Documents\\bms_app',
       );
+
+      // Create directory if not exists
+      if (!await documentsDir.exists()) {
+        await documentsDir.create(recursive: true);
+        print('DatabaseService: Created bms_app directory in Documents');
+      }
+
+      // Build full database path
+      final dbPath = join(documentsDir.path, Constants.dbName);
 
       print('DatabaseService: Database path: $dbPath');
 
       final db = await databaseFactory.openDatabase(
         dbPath,
         options: OpenDatabaseOptions(
-          version: 4,
+          version: 5,
           onCreate: _onCreate,
           onUpgrade: _onUpgrade,
           onOpen: _onOpen,
@@ -175,6 +186,8 @@ class DatabaseService {
             amount_due REAL NOT NULL DEFAULT 0.00,
             amount_paid REAL NOT NULL DEFAULT 0.00,
             status TEXT NOT NULL DEFAULT 'Pending',
+            due_date TEXT,
+            payment_date TEXT,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL,
             FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE
@@ -203,6 +216,22 @@ class DatabaseService {
         print('DatabaseService: Paid admission fees table created');
       }
 
+      if (oldVersion < 5) {
+        print(
+          'DatabaseService: Adding due_date and payment_date columns to admission_fees table for version 5',
+        );
+
+        // Add due_date and payment_date columns to admission_fees table
+        await db.execute('ALTER TABLE admission_fees ADD COLUMN due_date TEXT');
+        await db.execute(
+          'ALTER TABLE admission_fees ADD COLUMN payment_date TEXT',
+        );
+
+        print(
+          'DatabaseService: Added due_date and payment_date columns to admission_fees table',
+        );
+      }
+
       print('DatabaseService: Database upgrade completed');
     } catch (e, stackTrace) {
       print('DatabaseService: Error during database upgrade: $e');
@@ -229,6 +258,8 @@ class DatabaseService {
             amount_due REAL NOT NULL DEFAULT 0.00,
             amount_paid REAL NOT NULL DEFAULT 0.00,
             status TEXT NOT NULL DEFAULT 'Pending',
+            due_date TEXT,
+            payment_date TEXT,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL,
             FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE

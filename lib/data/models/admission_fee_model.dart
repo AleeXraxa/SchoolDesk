@@ -4,6 +4,8 @@ class AdmissionFeeModel {
   final double amountDue;
   final double amountPaid;
   final String status; // 'Pending' or 'Paid'
+  final DateTime? dueDate;
+  final DateTime? paymentDate;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -20,6 +22,8 @@ class AdmissionFeeModel {
     required this.amountDue,
     required this.amountPaid,
     required this.status,
+    this.dueDate,
+    this.paymentDate,
     this.createdAt,
     this.updatedAt,
     this.studentName,
@@ -33,6 +37,8 @@ class AdmissionFeeModel {
       'amount_due': amountDue,
       'amount_paid': amountPaid,
       'status': status,
+      'due_date': dueDate?.toIso8601String(),
+      'payment_date': paymentDate?.toIso8601String(),
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
     };
@@ -45,6 +51,12 @@ class AdmissionFeeModel {
       amountDue: (json['amount_due'] as num?)?.toDouble() ?? 0.0,
       amountPaid: (json['amount_paid'] as num?)?.toDouble() ?? 0.0,
       status: json['status'] ?? 'Pending',
+      dueDate: json['due_date'] != null
+          ? DateTime.parse(json['due_date'])
+          : null,
+      paymentDate: json['payment_date'] != null
+          ? DateTime.parse(json['payment_date'])
+          : null,
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'])
           : null,
@@ -62,6 +74,8 @@ class AdmissionFeeModel {
     double? amountDue,
     double? amountPaid,
     String? status,
+    DateTime? dueDate,
+    DateTime? paymentDate,
     DateTime? createdAt,
     DateTime? updatedAt,
     String? studentName,
@@ -73,6 +87,8 @@ class AdmissionFeeModel {
       amountDue: amountDue ?? this.amountDue,
       amountPaid: amountPaid ?? this.amountPaid,
       status: status ?? this.status,
+      dueDate: dueDate ?? this.dueDate,
+      paymentDate: paymentDate ?? this.paymentDate,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       studentName: studentName ?? this.studentName,
