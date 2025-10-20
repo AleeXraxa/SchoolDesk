@@ -42,7 +42,7 @@ class DatabaseService {
       final db = await databaseFactory.openDatabase(
         dbPath,
         options: OpenDatabaseOptions(
-          version: 5,
+          version: 6,
           onCreate: _onCreate,
           onUpgrade: _onUpgrade,
           onOpen: _onOpen,
@@ -232,6 +232,41 @@ class DatabaseService {
         );
       }
 
+      if (oldVersion < 6) {
+        print('DatabaseService: Creating monthly_fees table for version 6');
+
+        // Create monthly_fees table
+        await db.execute('''
+          CREATE TABLE monthly_fees (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            student_id INTEGER NOT NULL,
+            month TEXT NOT NULL,
+            amount REAL NOT NULL DEFAULT 0.00,
+            paid_amount REAL NOT NULL DEFAULT 0.00,
+            status TEXT NOT NULL DEFAULT 'Pending',
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE
+          )
+        ''');
+        print('DatabaseService: Monthly fees table created');
+
+        // Create monthly_payment_history table
+        await db.execute('''
+          CREATE TABLE monthly_payment_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            monthly_fee_id INTEGER NOT NULL,
+            paid_amount REAL NOT NULL,
+            payment_date TEXT NOT NULL,
+            payment_mode TEXT NOT NULL,
+            remarks TEXT,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY (monthly_fee_id) REFERENCES monthly_fees (id) ON DELETE CASCADE
+          )
+        ''');
+        print('DatabaseService: Monthly payment history table created');
+      }
+
       print('DatabaseService: Database upgrade completed');
     } catch (e, stackTrace) {
       print('DatabaseService: Error during database upgrade: $e');
@@ -287,6 +322,51 @@ class DatabaseService {
           )
         ''');
         print('DatabaseService: Paid admission fees table created');
+      }
+
+      // Check if monthly_fees table exists, create if not
+      final monthlyTables = await db.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='monthly_fees'",
+      );
+
+      if (monthlyTables.isEmpty) {
+        print('DatabaseService: Creating monthly_fees table...');
+        await db.execute('''
+          CREATE TABLE monthly_fees (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            student_id INTEGER NOT NULL,
+            month TEXT NOT NULL,
+            amount REAL NOT NULL DEFAULT 0.00,
+            paid_amount REAL NOT NULL DEFAULT 0.00,
+            status TEXT NOT NULL DEFAULT 'Pending',
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE
+          )
+        ''');
+        print('DatabaseService: Monthly fees table created');
+      }
+
+      // Check if monthly_payment_history table exists, create if not
+      final monthlyPaymentTables = await db.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='monthly_payment_history'",
+      );
+
+      if (monthlyPaymentTables.isEmpty) {
+        print('DatabaseService: Creating monthly_payment_history table...');
+        await db.execute('''
+          CREATE TABLE monthly_payment_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            monthly_fee_id INTEGER NOT NULL,
+            paid_amount REAL NOT NULL,
+            payment_date TEXT NOT NULL,
+            payment_mode TEXT NOT NULL,
+            remarks TEXT,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY (monthly_fee_id) REFERENCES monthly_fees (id) ON DELETE CASCADE
+          )
+        ''');
+        print('DatabaseService: Monthly payment history table created');
       }
     } catch (e, stackTrace) {
       print('DatabaseService: Error during database open: $e');

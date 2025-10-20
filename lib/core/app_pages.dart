@@ -10,6 +10,8 @@ import '../features/classes/view/classes_view.dart';
 import '../features/classes/controller/classes_controller.dart';
 import '../features/fees/view/fees_view.dart';
 import '../features/fees/controller/fees_controller.dart';
+import '../features/fees/view/monthly_fees_view.dart';
+import '../features/fees/controller/monthly_fees_controller.dart';
 
 class AppPages {
   static final pages = [
@@ -46,6 +48,13 @@ class AppPages {
       page: () => const FeesView(),
       binding: BindingsBuilder(() {
         Get.lazyPut<FeesController>(() => FeesController());
+      }),
+    ),
+    GetPage(
+      name: AppRoutes.monthlyFees,
+      page: () => const MonthlyFeesView(),
+      binding: BindingsBuilder(() {
+        Get.lazyPut<MonthlyFeesController>(() => MonthlyFeesController());
       }),
     ),
     // Add more pages here as needed
