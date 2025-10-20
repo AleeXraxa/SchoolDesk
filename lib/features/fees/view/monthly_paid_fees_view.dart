@@ -16,7 +16,9 @@ class MonthlyPaidFeesView extends StatelessWidget {
     final MonthlyFeesController controller = Get.find();
 
     return Obx(() {
-      final fees = controller.getFilteredAggregatedPaidFees();
+      final fees = controller.isViewFiltered.value
+          ? controller.getFilteredAggregatedPaidFeesForView()
+          : controller.getFilteredAggregatedPaidFees();
 
       if (fees.isEmpty) {
         return Column(
@@ -64,12 +66,15 @@ class MonthlyPaidFeesView extends StatelessWidget {
                     ),
                     SizedBox(height: 16.h),
                     Text(
-                      'No records found',
+                      controller.isViewFiltered.value
+                          ? 'No records found for ${controller.selectedClass.value} - ${controller.selectedMonth.value}'
+                          : 'No records found',
                       style: GoogleFonts.poppins(
                         fontSize: 16.sp,
                         color: Colors.grey[600],
                         fontWeight: FontWeight.w500,
                       ),
+                      textAlign: TextAlign.center,
                     ),
                   ],
                 ),

@@ -42,7 +42,7 @@ class DatabaseService {
       final db = await databaseFactory.openDatabase(
         dbPath,
         options: OpenDatabaseOptions(
-          version: 6,
+          version: 7,
           onCreate: _onCreate,
           onUpgrade: _onUpgrade,
           onOpen: _onOpen,
@@ -169,6 +169,7 @@ class DatabaseService {
             admission_fees REAL NOT NULL,
             monthly_fees REAL NOT NULL,
             status TEXT NOT NULL DEFAULT 'Active',
+            is_monthly_fee_synced INTEGER NOT NULL DEFAULT 0,
             FOREIGN KEY (class_id) REFERENCES classes (id)
           )
         ''');
@@ -265,6 +266,21 @@ class DatabaseService {
           )
         ''');
         print('DatabaseService: Monthly payment history table created');
+      }
+
+      if (oldVersion < 7) {
+        print(
+          'DatabaseService: Adding is_monthly_fee_synced column to students table for version 7',
+        );
+
+        // Add is_monthly_fee_synced column to students table
+        await db.execute(
+          'ALTER TABLE students ADD COLUMN is_monthly_fee_synced INTEGER NOT NULL DEFAULT 0',
+        );
+
+        print(
+          'DatabaseService: Added is_monthly_fee_synced column to students table',
+        );
       }
 
       print('DatabaseService: Database upgrade completed');

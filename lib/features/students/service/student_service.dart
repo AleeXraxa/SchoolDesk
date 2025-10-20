@@ -1,5 +1,6 @@
 import '../../../data/database_service.dart';
 import '../../../data/models/student_model.dart';
+import '../../../features/fees/service/monthly_fees_service.dart';
 
 class StudentService {
   static Future<int> addStudent(StudentModel studentModel) async {
@@ -8,6 +9,22 @@ class StudentService {
       final db = await DatabaseService.database;
       final id = await db.insert('students', studentModel.toJson());
       print('StudentService: Successfully added student with ID: $id');
+
+      // Create a student model with the ID for auto-generation
+      final studentWithId = studentModel.copyWith(id: id);
+
+      // Auto-generate monthly fees for the new student if applicable
+      try {
+        await MonthlyFeesService.autoGenerateMonthlyFeesForNewStudent(
+          studentWithId,
+        );
+      } catch (e) {
+        print(
+          'StudentService: Warning - Failed to auto-generate monthly fees: $e',
+        );
+        // Don't fail the student creation if fee generation fails
+      }
+
       return id;
     } catch (e, stackTrace) {
       print('StudentService: Error adding student: $e');

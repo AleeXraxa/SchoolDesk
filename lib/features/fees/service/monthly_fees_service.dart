@@ -2,6 +2,7 @@ import '../../../data/database_service.dart';
 import '../../../data/models/monthly_fee_model.dart';
 import '../../../data/models/monthly_payment_history_model.dart';
 import '../../../data/models/monthly_paid_fees_model.dart';
+import '../../../data/models/student_model.dart';
 import 'monthly_payment_history_service.dart';
 
 class MonthlyFeesService {
@@ -393,6 +394,339 @@ class MonthlyFeesService {
       print('MonthlyFeesService: Stack trace: $stackTrace');
       rethrow;
     }
+  }
+
+  static Future<List<MonthlyFeeModel>> getPendingMonthlyFeesByClassAndMonth(
+    String className,
+    String month, {
+    String? section,
+  }) async {
+    try {
+      final db = await DatabaseService.database;
+      String whereClause =
+          'mf.status IN (\'Pending\', \'Partial\') AND s.class_name = ? AND mf.month = ?';
+      List<dynamic> whereArgs = [className, month];
+
+      if (section != null && section.isNotEmpty) {
+        whereClause += ' AND s.section = ?';
+        whereArgs.add(section);
+      }
+
+      print(
+        'MonthlyFeesService: Querying pending fees with whereClause: $whereClause, args: $whereArgs',
+      );
+
+      final result = await db.rawQuery('''
+        SELECT mf.*, s.student_name, s.roll_no, s.class_name, s.section
+        FROM monthly_fees mf
+        LEFT JOIN students s ON mf.student_id = s.id
+        WHERE $whereClause
+        ORDER BY mf.created_at DESC
+      ''', whereArgs);
+
+      print('MonthlyFeesService: Found ${result.length} pending fees records');
+
+      return result.map((json) => MonthlyFeeModel.fromJson(json)).toList();
+    } catch (e, stackTrace) {
+      print(
+        'MonthlyFeesService: Error fetching pending monthly fees by class and month: $e',
+      );
+      print('MonthlyFeesService: Stack trace: $stackTrace');
+      rethrow;
+    }
+  }
+
+  static Future<List<MonthlyFeeModel>> getPaidMonthlyFeesByClassAndMonth(
+    String className,
+    String month, {
+    String? section,
+  }) async {
+    try {
+      final db = await DatabaseService.database;
+      String whereClause =
+          'mf.status = \'Paid\' AND s.class_name = ? AND mf.month = ?';
+      List<dynamic> whereArgs = [className, month];
+
+      if (section != null && section.isNotEmpty) {
+        whereClause += ' AND s.section = ?';
+        whereArgs.add(section);
+      }
+
+      print(
+        'MonthlyFeesService: Querying paid fees with whereClause: $whereClause, args: $whereArgs',
+      );
+
+      final result = await db.rawQuery('''
+        SELECT mf.*, s.student_name, s.roll_no, s.class_name, s.section
+        FROM monthly_fees mf
+        LEFT JOIN students s ON mf.student_id = s.id
+        WHERE $whereClause
+        ORDER BY mf.updated_at DESC
+      ''', whereArgs);
+
+      print('MonthlyFeesService: Found ${result.length} paid fees records');
+
+      return result.map((json) => MonthlyFeeModel.fromJson(json)).toList();
+    } catch (e, stackTrace) {
+      print(
+        'MonthlyFeesService: Error fetching paid monthly fees by class and month: $e',
+      );
+      print('MonthlyFeesService: Stack trace: $stackTrace');
+      rethrow;
+    }
+  }
+
+  static Future<List<MonthlyPaidFeesModel>>
+  getAggregatedPaidMonthlyFeesByClassAndMonth(
+    String className,
+    String month, {
+    String? section,
+  }) async {
+    try {
+      final db = await DatabaseService.database;
+      String whereClause =
+          'mf.status = \'Paid\' AND s.class_name = ? AND mf.month = ?';
+      List<dynamic> whereArgs = [className, month];
+
+      if (section != null && section.isNotEmpty) {
+        whereClause += ' AND s.section = ?';
+        whereArgs.add(section);
+      }
+
+      print(
+        'MonthlyFeesService: Querying aggregated paid fees with whereClause: $whereClause, args: $whereArgs',
+      );
+
+      final result = await db.rawQuery('''
+        SELECT
+          mf.student_id,
+          s.student_name,
+          s.roll_no,
+          s.class_name,
+          s.section,
+          mf.month,
+          mf.amount as total_fee_amount,
+          SUM(mph.paid_amount) as total_paid_amount,
+          MAX(mph.payment_date) as most_recent_payment_date,
+          COUNT(mph.id) as payment_count
+        FROM monthly_fees mf
+        LEFT JOIN students s ON mf.student_id = s.id
+        LEFT JOIN monthly_payment_history mph ON mf.id = mph.monthly_fee_id
+        WHERE $whereClause
+        GROUP BY mf.student_id, mf.month
+        ORDER BY MAX(mph.payment_date) DESC
+      ''', whereArgs);
+
+      print(
+        'MonthlyFeesService: Found ${result.length} aggregated paid fees records',
+      );
+
+      final aggregatedFees = <MonthlyPaidFeesModel>[];
+
+      for (final row in result) {
+        // Get individual payments for this student and month
+        // First get the monthly fee ID for this student and month
+        final feeResult = await db.rawQuery(
+          '''
+          SELECT id FROM monthly_fees
+          WHERE student_id = ? AND month = ?
+        ''',
+          [row['student_id'], month],
+        );
+
+        final payments = feeResult.isNotEmpty
+            ? await MonthlyPaymentHistoryService.getPaymentsByMonthlyFeeId(
+                feeResult.first['id'] as int,
+              )
+            : <MonthlyPaymentHistoryModel>[];
+
+        aggregatedFees.add(
+          MonthlyPaidFeesModel(
+            studentId: row['student_id'] as int,
+            studentName: row['student_name'] as String?,
+            rollNo: row['roll_no'] as String?,
+            className: row['class_name'] as String?,
+            section: row['section'] as String?,
+            month: row['month'] as String,
+            totalPaidAmount:
+                (row['total_paid_amount'] as num?)?.toDouble() ?? 0.0,
+            totalFeeAmount:
+                (row['total_fee_amount'] as num?)?.toDouble() ?? 0.0,
+            mostRecentPaymentDate: row['most_recent_payment_date'] != null
+                ? DateTime.parse(row['most_recent_payment_date'] as String)
+                : DateTime.now(),
+            paymentCount: (row['payment_count'] as num?)?.toInt() ?? 0,
+            individualPayments: payments,
+          ),
+        );
+      }
+
+      return aggregatedFees;
+    } catch (e, stackTrace) {
+      print(
+        'MonthlyFeesService: Error fetching aggregated paid monthly fees by class and month: $e',
+      );
+      print('MonthlyFeesService: Stack trace: $stackTrace');
+      rethrow;
+    }
+  }
+
+  static Future<String?> getLatestGeneratedMonth() async {
+    try {
+      final db = await DatabaseService.database;
+      final result = await db.rawQuery('''
+        SELECT DISTINCT month
+        FROM monthly_fees
+        ORDER BY created_at DESC
+        LIMIT 1
+      ''');
+
+      if (result.isNotEmpty) {
+        return result.first['month'] as String;
+      }
+      return null;
+    } catch (e, stackTrace) {
+      print('MonthlyFeesService: Error fetching latest generated month: $e');
+      print('MonthlyFeesService: Stack trace: $stackTrace');
+      rethrow;
+    }
+  }
+
+  static Future<void> autoGenerateMonthlyFeesForNewStudent(
+    StudentModel student,
+  ) async {
+    try {
+      // Skip if student is already synced
+      if (student.isMonthlyFeeSynced) {
+        print(
+          'MonthlyFeesService: Student ${student.studentName} is already synced, skipping auto-generation',
+        );
+        return;
+      }
+
+      // Get the latest generated month
+      final latestMonth = await getLatestGeneratedMonth();
+      if (latestMonth == null) {
+        print(
+          'MonthlyFeesService: No monthly fees generated yet, skipping auto-generation for new student',
+        );
+        return;
+      }
+
+      // Parse the latest month to get year and month number
+      final monthParts = latestMonth.split(' ');
+      if (monthParts.length != 2) {
+        print('MonthlyFeesService: Invalid month format: $latestMonth');
+        return;
+      }
+
+      final monthName = monthParts[0];
+      final year = int.tryParse(monthParts[1]);
+      if (year == null) {
+        print('MonthlyFeesService: Invalid year in month: $latestMonth');
+        return;
+      }
+
+      // Get month number from name
+      final monthNumber = _getMonthNumber(monthName);
+      if (monthNumber == null) {
+        print('MonthlyFeesService: Invalid month name: $monthName');
+        return;
+      }
+
+      // Create date for the last day of the latest generated month
+      final lastDayOfMonth = DateTime(year, monthNumber + 1, 0);
+
+      // Check if student's admission date is before or on the last day of the latest generated month
+      if (student.admissionDate.isAfter(lastDayOfMonth)) {
+        print(
+          'MonthlyFeesService: Student admitted after latest generated month, skipping auto-generation',
+        );
+        return;
+      }
+
+      // Check if fee already exists for this student and month
+      final db = await DatabaseService.database;
+      final existingFees = await db.rawQuery(
+        '''
+        SELECT id FROM monthly_fees
+        WHERE student_id = ? AND month = ?
+      ''',
+        [student.id, latestMonth],
+      );
+
+      if (existingFees.isNotEmpty) {
+        print(
+          'MonthlyFeesService: Fee already exists for student ${student.studentName} for month $latestMonth',
+        );
+        return;
+      }
+
+      // Generate the monthly fee entry
+      final fee = MonthlyFeeModel(
+        studentId: student.id!,
+        month: latestMonth,
+        amount: student.monthlyFees,
+        paidAmount: 0.0,
+        status: 'Pending',
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+
+      await addMonthlyFee(fee);
+
+      // Update student's sync status
+      await _updateStudentMonthlyFeeSyncStatus(student.id!, true);
+
+      print(
+        'MonthlyFeesService: Auto-generated monthly fee for student ${student.studentName} for month $latestMonth',
+      );
+    } catch (e, stackTrace) {
+      print(
+        'MonthlyFeesService: Error auto-generating monthly fees for new student: $e',
+      );
+      print('MonthlyFeesService: Stack trace: $stackTrace');
+      rethrow;
+    }
+  }
+
+  static Future<void> _updateStudentMonthlyFeeSyncStatus(
+    int studentId,
+    bool isSynced,
+  ) async {
+    try {
+      final db = await DatabaseService.database;
+      await db.update(
+        'students',
+        {'is_monthly_fee_synced': isSynced ? 1 : 0},
+        where: 'id = ?',
+        whereArgs: [studentId],
+      );
+    } catch (e, stackTrace) {
+      print(
+        'MonthlyFeesService: Error updating student monthly fee sync status: $e',
+      );
+      print('MonthlyFeesService: Stack trace: $stackTrace');
+      rethrow;
+    }
+  }
+
+  static int? _getMonthNumber(String monthName) {
+    const monthMap = {
+      'January': 1,
+      'February': 2,
+      'March': 3,
+      'April': 4,
+      'May': 5,
+      'June': 6,
+      'July': 7,
+      'August': 8,
+      'September': 9,
+      'October': 10,
+      'November': 11,
+      'December': 12,
+    };
+    return monthMap[monthName];
   }
 
   static String _getMonthName(int month) {

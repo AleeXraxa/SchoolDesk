@@ -20,6 +20,7 @@ class StudentModel {
   final double admissionFees;
   final double monthlyFees;
   final String status;
+  final bool isMonthlyFeeSynced;
 
   StudentModel({
     this.id,
@@ -43,6 +44,7 @@ class StudentModel {
     required this.admissionFees,
     required this.monthlyFees,
     this.status = 'Active',
+    this.isMonthlyFeeSynced = false,
   });
 
   Map<String, dynamic> toJson() {
@@ -68,6 +70,7 @@ class StudentModel {
       'admission_fees': admissionFees,
       'monthly_fees': monthlyFees,
       'status': status,
+      'is_monthly_fee_synced': isMonthlyFeeSynced ? 1 : 0,
     };
   }
 
@@ -94,6 +97,7 @@ class StudentModel {
       admissionFees: json['admission_fees'].toDouble(),
       monthlyFees: json['monthly_fees'].toDouble(),
       status: json['status'],
+      isMonthlyFeeSynced: (json['is_monthly_fee_synced'] as int?) == 1,
     );
   }
 
@@ -119,6 +123,7 @@ class StudentModel {
     double? admissionFees,
     double? monthlyFees,
     String? status,
+    bool? isMonthlyFeeSynced,
   }) {
     return StudentModel(
       id: id ?? this.id,
@@ -142,6 +147,7 @@ class StudentModel {
       admissionFees: admissionFees ?? this.admissionFees,
       monthlyFees: monthlyFees ?? this.monthlyFees,
       status: status ?? this.status,
+      isMonthlyFeeSynced: isMonthlyFeeSynced ?? this.isMonthlyFeeSynced,
     );
   }
 }

@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../controller/monthly_fees_controller.dart';
 import 'monthly_pending_fees_view.dart';
 import 'monthly_paid_fees_view.dart';
+import 'view_fees_dialog.dart';
 
 class MonthlyFeesView extends StatelessWidget {
   const MonthlyFeesView({super.key});
@@ -87,37 +88,123 @@ class MonthlyFeesView extends StatelessWidget {
   Widget _buildHeader(MonthlyFeesController monthlyController) {
     return Container(
       padding: EdgeInsets.all(16.w),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Monthly Fees Management',
-            style: GoogleFonts.poppins(
-              fontSize: 24.sp,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-          ),
-          ElevatedButton.icon(
-            onPressed: () => _showGenerateFeesDialog(),
-            icon: Icon(Icons.add, size: 18.sp),
-            label: Text(
-              'Generate Monthly Fees',
-              style: GoogleFonts.poppins(
-                fontSize: 14.sp,
-                fontWeight: FontWeight.w500,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Monthly Fees Management',
+                style: GoogleFonts.poppins(
+                  fontSize: 24.sp,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
               ),
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF3A7BD5),
-              foregroundColor: Colors.white,
-              elevation: 2,
-              padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12.r),
+              Row(
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: () => _showViewFeesDialog(),
+                    icon: Icon(Icons.visibility, size: 18.sp),
+                    label: Text(
+                      'View Fees',
+                      style: GoogleFonts.poppins(
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: const Color(0xFF3A7BD5),
+                      elevation: 2,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 16.w,
+                        vertical: 12.h,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12.r),
+                        side: const BorderSide(
+                          color: Color(0xFF3A7BD5),
+                          width: 1,
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 12.w),
+                  ElevatedButton.icon(
+                    onPressed: () => _showGenerateFeesDialog(),
+                    icon: Icon(Icons.add, size: 18.sp),
+                    label: Text(
+                      'Generate Monthly Fees',
+                      style: GoogleFonts.poppins(
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF3A7BD5),
+                      foregroundColor: Colors.white,
+                      elevation: 2,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 20.w,
+                        vertical: 12.h,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12.r),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ),
+            ],
           ),
+          // Show current filter info if filtered
+          Obx(() {
+            if (monthlyController.isViewFiltered.value) {
+              return Container(
+                margin: EdgeInsets.only(top: 12.h),
+                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                decoration: BoxDecoration(
+                  color: Colors.blue[50],
+                  borderRadius: BorderRadius.circular(8.r),
+                  border: Border.all(color: Colors.blue[200]!),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.filter_list,
+                      color: Colors.blue[700],
+                      size: 16.sp,
+                    ),
+                    SizedBox(width: 8.w),
+                    Text(
+                      'Showing fees for ${monthlyController.selectedClass.value} - ${monthlyController.selectedMonth.value}',
+                      style: GoogleFonts.poppins(
+                        fontSize: 14.sp,
+                        color: Colors.blue[700],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const Spacer(),
+                    TextButton.icon(
+                      onPressed: () => monthlyController.clearViewFilter(),
+                      icon: Icon(Icons.clear, size: 16.sp),
+                      label: Text(
+                        'Clear Filter',
+                        style: GoogleFonts.poppins(fontSize: 12.sp),
+                      ),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.blue[700],
+                        padding: EdgeInsets.symmetric(horizontal: 8.w),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+            return const SizedBox.shrink();
+          }),
         ],
       ),
     );
@@ -174,25 +261,11 @@ class MonthlyFeesView extends StatelessWidget {
     );
   }
 
+  void _showViewFeesDialog() {
+    Get.dialog(const ViewFeesDialog(), barrierDismissible: true);
+  }
+
   void _showGenerateFeesDialog() {
-    Get.dialog(
-      AlertDialog(
-        title: const Text('Generate Monthly Fees'),
-        content: const Text(
-          'This will generate monthly fee records for all active students for the current month. '
-          'Only students without existing fees for this month will be processed.',
-        ),
-        actions: [
-          TextButton(onPressed: () => Get.back(), child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () async {
-              Get.back();
-              await Get.find<MonthlyFeesController>().generateMonthlyFees();
-            },
-            child: const Text('Generate'),
-          ),
-        ],
-      ),
-    );
+    Get.find<MonthlyFeesController>().showGenerateFeesConfirmation();
   }
 }
