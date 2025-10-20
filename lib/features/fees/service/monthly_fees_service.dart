@@ -484,8 +484,7 @@ class MonthlyFeesService {
   }) async {
     try {
       final db = await DatabaseService.database;
-      String whereClause =
-          'mf.status = \'Paid\' AND s.class_name = ? AND mf.month = ?';
+      String whereClause = 's.class_name = ? AND mf.month = ?';
       List<dynamic> whereArgs = [className, month];
 
       if (section != null && section.isNotEmpty) {
@@ -512,8 +511,9 @@ class MonthlyFeesService {
         FROM monthly_fees mf
         LEFT JOIN students s ON mf.student_id = s.id
         LEFT JOIN monthly_payment_history mph ON mf.id = mph.monthly_fee_id
-        WHERE $whereClause
+        WHERE $whereClause AND mph.paid_amount > 0
         GROUP BY mf.student_id, mf.month
+        HAVING SUM(mph.paid_amount) > 0
         ORDER BY MAX(mph.payment_date) DESC
       ''', whereArgs);
 

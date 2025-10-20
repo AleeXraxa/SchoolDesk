@@ -16,9 +16,7 @@ class MonthlyPaidFeesView extends StatelessWidget {
     final MonthlyFeesController controller = Get.find();
 
     return Obx(() {
-      final fees = controller.isViewFiltered.value
-          ? controller.getFilteredAggregatedPaidFeesForView()
-          : controller.getFilteredAggregatedPaidFees();
+      final fees = controller.getDisplayedAggregatedPaidFees();
 
       if (fees.isEmpty) {
         return Column(
