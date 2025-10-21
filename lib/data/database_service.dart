@@ -42,7 +42,7 @@ class DatabaseService {
       final db = await databaseFactory.openDatabase(
         dbPath,
         options: OpenDatabaseOptions(
-          version: 7,
+          version: 8,
           onCreate: _onCreate,
           onUpgrade: _onUpgrade,
           onOpen: _onOpen,
@@ -280,6 +280,53 @@ class DatabaseService {
 
         print(
           'DatabaseService: Added is_monthly_fee_synced column to students table',
+        );
+      }
+
+      if (oldVersion < 8) {
+        print(
+          'DatabaseService: Creating exam_fees_pending and exam_fees_paid tables for version 8',
+        );
+
+        // Create exam_fees_pending table
+        await db.execute('''
+          CREATE TABLE exam_fees_pending (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            student_id INTEGER NOT NULL,
+            class_id INTEGER NOT NULL,
+            exam_name TEXT NOT NULL,
+            exam_month TEXT NOT NULL,
+            total_fee REAL NOT NULL DEFAULT 0.00,
+            paid_amount REAL NOT NULL DEFAULT 0.00,
+            status TEXT NOT NULL DEFAULT 'Pending',
+            due_date TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE,
+            FOREIGN KEY (class_id) REFERENCES classes (id) ON DELETE CASCADE
+          )
+        ''');
+
+        // Create exam_fees_paid table
+        await db.execute('''
+          CREATE TABLE exam_fees_paid (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            pending_exam_fee_id INTEGER,
+            student_id INTEGER NOT NULL,
+            class_id INTEGER NOT NULL,
+            exam_name TEXT NOT NULL,
+            paid_amount REAL NOT NULL,
+            payment_date TEXT NOT NULL,
+            payment_mode TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY (pending_exam_fee_id) REFERENCES exam_fees_pending (id) ON DELETE CASCADE,
+            FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE,
+            FOREIGN KEY (class_id) REFERENCES classes (id) ON DELETE CASCADE
+          )
+        ''');
+
+        print(
+          'DatabaseService: Created exam_fees_pending and exam_fees_paid tables',
         );
       }
 
