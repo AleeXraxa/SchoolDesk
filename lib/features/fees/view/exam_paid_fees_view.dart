@@ -22,7 +22,9 @@ class ExamPaidFeesView extends StatelessWidget {
         );
       }
 
-      final fees = controller.getDisplayedAggregatedPaidFees();
+      final fees = controller.isViewFiltered.value
+          ? controller.getFilteredAggregatedPaidFeesForView()
+          : controller.getDisplayedAggregatedPaidFees();
 
       if (fees.isEmpty) {
         return Column(

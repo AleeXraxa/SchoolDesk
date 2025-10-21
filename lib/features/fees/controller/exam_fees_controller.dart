@@ -17,9 +17,11 @@ class ExamFeesController extends GetxController {
   // View Fees filtering
   var selectedClass = ''.obs;
   var selectedExam = ''.obs;
+  var selectedMonth = ''.obs;
   var isViewFiltered = false.obs;
   var filteredPendingFees = <ExamFeeModel>[].obs;
   var filteredPaidFees = <ExamPaidFeeModel>[].obs;
+  var filteredAggregatedPaidFees = <ExamPaidFeeModel>[].obs;
 
   // Statistics
   var totalPendingFees = 0.obs;
@@ -1600,6 +1602,17 @@ class ExamFeesController extends GetxController {
       filteredPendingFees.assignAll(pending);
       filteredPaidFees.assignAll(paid);
 
+      // Filter aggregated paid fees by the same criteria
+      final aggregatedPaid = await getAggregatedPaidFees();
+      final filteredAggregatedPaid = aggregatedPaid.where((fee) {
+        final classMatch = fee.className == className;
+        final examMatch = fee.examName == examName;
+        final sectionMatch = section == null || fee.section == section;
+        return classMatch && examMatch && sectionMatch;
+      }).toList();
+
+      filteredAggregatedPaidFees.assignAll(filteredAggregatedPaid);
+
       _calculateFilteredStatistics();
     } catch (e) {
       print('ExamFeesController: Error viewing fees by class and exam: $e');
@@ -1612,9 +1625,11 @@ class ExamFeesController extends GetxController {
   void clearViewFilter() {
     selectedClass.value = '';
     selectedExam.value = '';
+    selectedMonth.value = '';
     isViewFiltered.value = false;
     filteredPendingFees.clear();
     filteredPaidFees.clear();
+    filteredAggregatedPaidFees.clear();
   }
 
   List<ExamFeeModel> getDisplayedPendingFees() {
@@ -1655,6 +1670,18 @@ class ExamFeesController extends GetxController {
     }).toList();
   }
 
+  List<ExamPaidFeeModel> getFilteredAggregatedPaidFeesForView() {
+    if (searchQuery.value.isEmpty) {
+      return filteredAggregatedPaidFees;
+    }
+    return filteredAggregatedPaidFees.where((fee) {
+      final studentName = fee.studentName?.toLowerCase() ?? '';
+      final rollNo = fee.rollNo?.toLowerCase() ?? '';
+      final query = searchQuery.value.toLowerCase();
+      return studentName.contains(query) || rollNo.contains(query);
+    }).toList();
+  }
+
   void _calculateFilteredStatistics() {
     if (isViewFiltered.value) {
       totalPendingFees.value = filteredPendingFees
@@ -1666,6 +1693,67 @@ class ExamFeesController extends GetxController {
           .length;
     } else {
       _calculateStatistics();
+    }
+  }
+
+  Future<void> viewFeesByClassAndExamAndMonth(
+    String className,
+    String examName,
+    String month, {
+    String? section,
+  }) async {
+    try {
+      isLoading.value = true;
+      selectedClass.value = section != null ? '$className $section' : className;
+      selectedExam.value = examName;
+      selectedMonth.value = month;
+      isViewFiltered.value = true;
+
+      print(
+        "Filtering by: className='$className', section='$section', examName='$examName', month='$month'",
+      );
+
+      // Load filtered data
+      final pending =
+          await ExamFeesService.getPendingExamFeesByClassAndExamAndMonth(
+            className,
+            examName,
+            month,
+            section: section,
+          );
+
+      // Load paid fees with month filtering via JOIN with pending table
+      final paid = await ExamFeesService.getPaidExamFeesByClassAndExamAndMonth(
+        className,
+        examName,
+        month,
+        section: section,
+      );
+
+      print("Filtered results: pending=${pending.length}, paid=${paid.length}");
+
+      filteredPendingFees.assignAll(pending);
+      filteredPaidFees.assignAll(paid);
+
+      // Filter aggregated paid fees by the same criteria
+      final aggregatedPaid = await getAggregatedPaidFees();
+      final filteredAggregatedPaid = aggregatedPaid.where((fee) {
+        final classMatch = fee.className == className;
+        final examMatch = fee.examName == examName;
+        final sectionMatch = section == null || fee.section == section;
+        return classMatch && examMatch && sectionMatch;
+      }).toList();
+
+      filteredAggregatedPaidFees.assignAll(filteredAggregatedPaid);
+
+      _calculateFilteredStatistics();
+    } catch (e) {
+      print(
+        'ExamFeesController: Error viewing fees by class, exam and month: $e',
+      );
+      Get.snackbar('Error', 'Failed to load filtered fees');
+    } finally {
+      isLoading.value = false;
     }
   }
 }

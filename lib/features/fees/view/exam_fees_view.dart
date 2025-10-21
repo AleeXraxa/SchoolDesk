@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../controller/exam_fees_controller.dart';
 import 'exam_pending_fees_view.dart';
 import 'exam_paid_fees_view.dart';
+import 'exam_fees_filter_dialog.dart';
 
 class ExamFeesView extends StatelessWidget {
   const ExamFeesView({super.key});
@@ -28,12 +29,8 @@ class ExamFeesView extends StatelessWidget {
                   Container(
                     margin: EdgeInsets.all(16.w),
                     constraints: BoxConstraints(
-                      minHeight:
-                          MediaQuery.of(context).size.height *
-                          0.3, // Minimum height
-                      maxHeight:
-                          MediaQuery.of(context).size.height *
-                          0.6, // Maximum height
+                      minHeight: MediaQuery.of(context).size.height * 0.3,
+                      maxHeight: MediaQuery.of(context).size.height * 0.6,
                     ),
                     decoration: BoxDecoration(
                       color: Colors.white,
@@ -48,19 +45,15 @@ class ExamFeesView extends StatelessWidget {
                     ),
                     child: const ExamPendingFeesView(),
                   ),
-                  SizedBox(height: 16.h), // Spacing between tables
+                  SizedBox(height: 16.h),
                   // Paid Fees Section
                   Container(
                     margin: EdgeInsets.symmetric(
                       horizontal: 16.w,
                     ).copyWith(bottom: 16.w),
                     constraints: BoxConstraints(
-                      minHeight:
-                          MediaQuery.of(context).size.height *
-                          0.3, // Minimum height
-                      maxHeight:
-                          MediaQuery.of(context).size.height *
-                          0.6, // Maximum height
+                      minHeight: MediaQuery.of(context).size.height * 0.3,
+                      maxHeight: MediaQuery.of(context).size.height * 0.6,
                     ),
                     decoration: BoxDecoration(
                       color: Colors.white,
@@ -101,28 +94,60 @@ class ExamFeesView extends StatelessWidget {
                   color: Colors.black87,
                 ),
               ),
-              ElevatedButton.icon(
-                onPressed: () => examController.showGenerateFeesConfirmation(),
-                icon: Icon(Icons.add, size: 18.sp),
-                label: Text(
-                  'Generate Exam Fees',
-                  style: GoogleFonts.poppins(
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.w500,
+              Row(
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: () => _showFilterDialog(),
+                    icon: Icon(Icons.filter_list, size: 18.sp),
+                    label: Text(
+                      'Filter',
+                      style: GoogleFonts.poppins(
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: const Color(0xFF3A7BD5),
+                      elevation: 2,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 16.w,
+                        vertical: 12.h,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12.r),
+                        side: const BorderSide(
+                          color: Color(0xFF3A7BD5),
+                          width: 1,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF3A7BD5),
-                  foregroundColor: Colors.white,
-                  elevation: 2,
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 20.w,
-                    vertical: 12.h,
+                  SizedBox(width: 12.w),
+                  ElevatedButton.icon(
+                    onPressed: () => _showGenerateFeesDialog(),
+                    icon: Icon(Icons.add, size: 18.sp),
+                    label: Text(
+                      'Generate Exam Fees',
+                      style: GoogleFonts.poppins(
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF3A7BD5),
+                      foregroundColor: Colors.white,
+                      elevation: 2,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 20.w,
+                        vertical: 12.h,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12.r),
+                      ),
+                    ),
                   ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12.r),
-                  ),
-                ),
+                ],
               ),
             ],
           ),
@@ -145,12 +170,14 @@ class ExamFeesView extends StatelessWidget {
                       size: 16.sp,
                     ),
                     SizedBox(width: 8.w),
-                    Text(
-                      'Showing fees for ${examController.selectedClass.value} - ${examController.selectedExam.value}',
-                      style: GoogleFonts.poppins(
-                        fontSize: 14.sp,
-                        color: Colors.blue[700],
-                        fontWeight: FontWeight.w500,
+                    Expanded(
+                      child: Text(
+                        'Showing fees for ${examController.selectedClass.value} - ${examController.selectedExam.value} - ${examController.selectedMonth.value}',
+                        style: GoogleFonts.poppins(
+                          fontSize: 14.sp,
+                          color: Colors.blue[700],
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ),
                     const Spacer(),
@@ -226,5 +253,13 @@ class ExamFeesView extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  void _showFilterDialog() {
+    Get.dialog(const ExamFeesFilterDialog(), barrierDismissible: true);
+  }
+
+  void _showGenerateFeesDialog() {
+    Get.find<ExamFeesController>().showGenerateFeesConfirmation();
   }
 }

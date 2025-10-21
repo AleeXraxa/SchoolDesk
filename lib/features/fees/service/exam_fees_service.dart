@@ -453,6 +453,95 @@ class ExamFeesService {
     }
   }
 
+  static Future<List<ExamFeeModel>> getPendingExamFeesByClassAndExamAndMonth(
+    String className,
+    String examName,
+    String month, {
+    String? section,
+  }) async {
+    try {
+      final db = await DatabaseService.database;
+      String whereClause =
+          'efp.status IN (\'Pending\', \'Partially Paid\') AND c.class_name = ? AND efp.exam_name = ? AND efp.exam_month = ?';
+      List<dynamic> whereArgs = [className, examName, month];
+
+      if (section != null && section.isNotEmpty) {
+        whereClause += ' AND c.section = ?';
+        whereArgs.add(section);
+      }
+
+      print(
+        'ExamFeesService: Querying pending exam fees with whereClause: $whereClause, args: $whereArgs',
+      );
+
+      final result = await db.rawQuery('''
+        SELECT efp.*, s.student_name, s.roll_no, c.class_name, c.section
+        FROM exam_fees_pending efp
+        LEFT JOIN students s ON efp.student_id = s.id
+        LEFT JOIN classes c ON efp.class_id = c.id
+        WHERE $whereClause
+        ORDER BY efp.due_date ASC, efp.created_at DESC
+      ''', whereArgs);
+
+      print(
+        'ExamFeesService: Found ${result.length} pending exam fees records',
+      );
+
+      return result.map((json) => ExamFeeModel.fromJson(json)).toList();
+    } catch (e, stackTrace) {
+      print(
+        'ExamFeesService: Error fetching pending exam fees by class, exam and month: $e',
+      );
+      print('ExamFeesService: Stack trace: $stackTrace');
+      rethrow;
+    }
+  }
+
+  static Future<List<ExamPaidFeeModel>> getPaidExamFeesByClassAndExamAndMonth(
+    String className,
+    String examName,
+    String month, {
+    String? section,
+  }) async {
+    try {
+      final db = await DatabaseService.database;
+      String whereClause =
+          'c.class_name = ? AND efp.exam_name = ? AND efp_pending.exam_month = ?';
+      List<dynamic> whereArgs = [className, examName, month];
+
+      if (section != null && section.isNotEmpty) {
+        whereClause += ' AND c.section = ?';
+        whereArgs.add(section);
+      }
+
+      print(
+        'ExamFeesService: Querying paid exam fees with month filtering via JOIN with pending table: $whereClause, args: $whereArgs',
+      );
+
+      final result = await db.rawQuery('''
+        SELECT efp.*, s.student_name, s.roll_no, c.class_name, c.section
+        FROM exam_fees_paid efp
+        LEFT JOIN exam_fees_pending efp_pending ON efp.pending_exam_fee_id = efp_pending.id
+        LEFT JOIN students s ON efp.student_id = s.id
+        LEFT JOIN classes c ON efp.class_id = c.id
+        WHERE $whereClause
+        ORDER BY efp.payment_date DESC
+      ''', whereArgs);
+
+      print(
+        'ExamFeesService: Found ${result.length} paid exam fees records with month filtering',
+      );
+
+      return result.map((json) => ExamPaidFeeModel.fromJson(json)).toList();
+    } catch (e, stackTrace) {
+      print(
+        'ExamFeesService: Error fetching paid exam fees by class, exam and month: $e',
+      );
+      print('ExamFeesService: Stack trace: $stackTrace');
+      rethrow;
+    }
+  }
+
   static String _getCurrentMonth() {
     final now = DateTime.now();
     const months = [
