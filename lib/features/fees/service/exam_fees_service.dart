@@ -421,6 +421,38 @@ class ExamFeesService {
     }
   }
 
+  static Future<List<ExamPaidFeeModel>> getExamPaidEntriesByStudent(
+    int studentId,
+    String examName,
+  ) async {
+    try {
+      final db = await DatabaseService.database;
+      final result = await db.rawQuery(
+        '''
+        SELECT efp.*, s.student_name, s.roll_no, c.class_name, c.section
+        FROM exam_fees_paid efp
+        LEFT JOIN students s ON efp.student_id = s.id
+        LEFT JOIN classes c ON efp.class_id = c.id
+        WHERE efp.student_id = ? AND efp.exam_name = ?
+        ORDER BY efp.payment_date DESC
+      ''',
+        [studentId, examName],
+      );
+
+      print(
+        'ExamFeesService: Found ${result.length} paid exam fee entries for student $studentId, exam $examName',
+      );
+
+      return result.map((json) => ExamPaidFeeModel.fromJson(json)).toList();
+    } catch (e, stackTrace) {
+      print(
+        'ExamFeesService: Error fetching paid exam fee entries by student: $e',
+      );
+      print('ExamFeesService: Stack trace: $stackTrace');
+      rethrow;
+    }
+  }
+
   static String _getCurrentMonth() {
     final now = DateTime.now();
     const months = [

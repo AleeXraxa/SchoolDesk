@@ -3,9 +3,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../controller/exam_fees_controller.dart';
-import '../../../widgets/loading_dialog.dart';
-import '../../../widgets/result_dialog.dart';
 import '../../../core/theme/app_colors.dart';
+import 'exam_fee_details_dialog.dart';
 
 class ExamPendingFeesView extends StatelessWidget {
   const ExamPendingFeesView({super.key});
@@ -425,157 +424,7 @@ class ExamPendingFeesView extends StatelessWidget {
   }
 
   void _showExamFeeDetailsDialog(dynamic fee) {
-    Get.dialog(
-      Dialog(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        child: TweenAnimationBuilder<double>(
-          tween: Tween(begin: 0.8, end: 1.0),
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.elasticOut,
-          builder: (context, scale, child) {
-            return Transform.scale(
-              scale: scale,
-              child: Container(
-                width: 450.w,
-                padding: EdgeInsets.all(24.w),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20.r),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 20,
-                      spreadRadius: 5,
-                      offset: const Offset(0, 10),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Header
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.receipt_long,
-                          color: AppColors.primary,
-                          size: 24.sp,
-                        ),
-                        SizedBox(width: 12.w),
-                        Text(
-                          'Exam Fee Details',
-                          style: GoogleFonts.poppins(
-                            fontSize: 18.sp,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black87,
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 20.h),
-
-                    // Fee Details
-                    Container(
-                      padding: EdgeInsets.all(16.w),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[50],
-                        borderRadius: BorderRadius.circular(12.r),
-                      ),
-                      child: Column(
-                        children: [
-                          _buildDetailRow(
-                            'Student Name',
-                            fee.studentName ?? 'Unknown',
-                          ),
-                          SizedBox(height: 12.h),
-                          _buildDetailRow('Roll No', fee.rollNo ?? 'N/A'),
-                          SizedBox(height: 12.h),
-                          _buildDetailRow('Exam Name', fee.examName ?? 'N/A'),
-                          SizedBox(height: 12.h),
-                          _buildDetailRow(
-                            'Class',
-                            '${fee.className ?? 'N/A'} ${fee.section ?? ''}'
-                                .trim(),
-                          ),
-                          SizedBox(height: 12.h),
-                          _buildDetailRow(
-                            'Total Amount',
-                            'PKR ${fee.totalFee?.toStringAsFixed(0) ?? '0'}',
-                          ),
-                          SizedBox(height: 12.h),
-                          _buildDetailRow(
-                            'Amount Paid',
-                            'PKR ${fee.paidAmount?.toStringAsFixed(0) ?? '0'}',
-                          ),
-                          SizedBox(height: 12.h),
-                          _buildDetailRow(
-                            'Remaining Amount',
-                            'PKR ${fee.remainingAmount?.toStringAsFixed(0) ?? '0'}',
-                          ),
-                          SizedBox(height: 12.h),
-                          _buildDetailRow('Status', fee.status ?? 'Pending'),
-                        ],
-                      ),
-                    ),
-
-                    SizedBox(height: 24.h),
-
-                    // Close Button
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: () => Get.back(),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          padding: EdgeInsets.symmetric(vertical: 12.h),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8.r),
-                          ),
-                        ),
-                        child: Text(
-                          'Close',
-                          style: GoogleFonts.poppins(
-                            fontSize: 14.sp,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        ),
-      ),
-      barrierDismissible: true,
-    );
-  }
-
-  Widget _buildDetailRow(String label, String value) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: GoogleFonts.poppins(
-            fontSize: 14.sp,
-            fontWeight: FontWeight.w500,
-            color: Colors.grey[700],
-          ),
-        ),
-        Text(
-          value,
-          style: GoogleFonts.poppins(
-            fontSize: 14.sp,
-            fontWeight: FontWeight.w600,
-            color: Colors.black87,
-          ),
-        ),
-      ],
-    );
+    Get.dialog(ExamFeeDetailsDialog(fee: fee), barrierDismissible: true);
   }
 
   void _showPaymentDialog(

@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
+import '../../../core/theme/app_colors.dart';
 import '../controller/exam_fees_controller.dart';
+import '../../../data/models/exam_paid_fee_model.dart';
+import 'exam_fee_details_dialog.dart';
 
 class ExamPaidFeesView extends StatelessWidget {
   const ExamPaidFeesView({super.key});
@@ -11,96 +17,235 @@ class ExamPaidFeesView extends StatelessWidget {
 
     return Obx(() {
       if (controller.isLoading.value) {
-        return const Center(child: CircularProgressIndicator());
+        return Center(
+          child: CircularProgressIndicator(color: AppColors.primary),
+        );
       }
 
-      final fees = controller.getDisplayedPaidFees();
+      final fees = controller.getDisplayedAggregatedPaidFees();
 
       if (fees.isEmpty) {
-        return _buildEmptyState();
+        return Column(
+          children: [
+            // Header - Always show header to maintain consistent layout
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+              decoration: BoxDecoration(
+                color: Colors.green[50],
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(12.r),
+                  topRight: Radius.circular(12.r),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.check_circle,
+                    color: Colors.green[700],
+                    size: 20.sp,
+                  ),
+                  SizedBox(width: 8.w),
+                  Text(
+                    'Paid Exam Fees (0)',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.green[800],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Empty state content
+            Expanded(
+              child: Container(
+                padding: EdgeInsets.all(32.w),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.check_circle_outline,
+                      size: 48.sp,
+                      color: Colors.grey[400],
+                    ),
+                    SizedBox(height: 16.h),
+                    Text(
+                      'No records found',
+                      style: GoogleFonts.poppins(
+                        fontSize: 16.sp,
+                        color: Colors.grey[600],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        );
       }
 
       return Column(
         children: [
-          // Search Bar
+          // Header
           Container(
-            padding: const EdgeInsets.all(16),
-            color: Colors.white,
-            child: TextField(
-              onChanged: controller.updateSearchQuery,
-              decoration: InputDecoration(
-                hintText: 'Search by student name or roll number...',
-                prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.grey.withOpacity(0.3)),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.grey.withOpacity(0.3)),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Colors.blue, width: 2),
-                ),
-                filled: true,
-                fillColor: Colors.grey.withOpacity(0.05),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+            decoration: BoxDecoration(
+              color: Colors.green[50],
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(12.r),
+                topRight: Radius.circular(12.r),
               ),
             ),
+            child: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.green[700], size: 20.sp),
+                SizedBox(width: 8.w),
+                Text(
+                  'Paid Exam Fees (${fees.length})',
+                  style: GoogleFonts.poppins(
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.green[800],
+                  ),
+                ),
+              ],
+            ),
           ),
-
-          // Filter Indicator
-          Obx(
-            () => controller.isViewFiltered.value
-                ? Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
+          // Table Header
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.1),
+              border: Border(
+                bottom: BorderSide(color: Colors.grey[300]!, width: 1),
+              ),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  flex: 1,
+                  child: Text(
+                    'Roll No',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary,
                     ),
-                    color: Colors.blue.withOpacity(0.1),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.filter_list,
-                          color: Colors.blue,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Filtered: ${controller.selectedClass.value} - ${controller.selectedExam.value}',
-                            style: const TextStyle(
-                              color: Colors.blue,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                        TextButton(
-                          onPressed: controller.clearViewFilter,
-                          child: const Text(
-                            'Clear Filter',
-                            style: TextStyle(color: Colors.blue),
-                          ),
-                        ),
-                      ],
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                Expanded(
+                  flex: 2,
+                  child: Text(
+                    'Student Name',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary,
                     ),
-                  )
-                : const SizedBox.shrink(),
+                  ),
+                ),
+                Expanded(
+                  flex: 2,
+                  child: Text(
+                    'Exam Details',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  flex: 1,
+                  child: Text(
+                    'Amount Paid',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                Expanded(
+                  flex: 1,
+                  child: Text(
+                    'Payment Mode',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                Expanded(
+                  flex: 1,
+                  child: Text(
+                    'Payment Date',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                Expanded(
+                  flex: 1,
+                  child: Text(
+                    'Remaining',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                Expanded(
+                  flex: 1,
+                  child: Text(
+                    'Actions',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ],
+            ),
           ),
-
-          // Fees List
+          // Table Body
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: fees.length,
-              itemBuilder: (context, index) {
-                final fee = fees[index];
-                return _buildFeeCard(fee);
-              },
+            child: SingleChildScrollView(
+              child: Column(
+                children: List.generate(fees.length, (index) {
+                  final fee = fees[index];
+                  final isEvenRow = index % 2 == 0;
+
+                  return Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 16.w,
+                      vertical: 10.h,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isEvenRow ? Colors.white : Colors.grey[25],
+                      border: Border(
+                        bottom: BorderSide(
+                          color: Colors.grey[200]!,
+                          width: 0.5,
+                        ),
+                      ),
+                    ),
+                    child: Row(children: _buildExamFeeCells(fee)),
+                  );
+                }),
+              ),
             ),
           ),
         ],
@@ -138,164 +283,160 @@ class ExamPaidFeesView extends StatelessWidget {
     );
   }
 
-  Widget _buildFeeCard(dynamic fee) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header
-            Row(
-              children: [
-                CircleAvatar(
-                  backgroundColor: Colors.green.withOpacity(0.1),
-                  child: const Icon(Icons.check_circle, color: Colors.green),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        fee.studentName ?? 'Unknown Student',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      Text(
-                        'Roll No: ${fee.rollNo ?? 'N/A'}',
-                        style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Text(
-                    'Paid',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.green,
-                    ),
-                  ),
-                ),
-              ],
+  List<Widget> _buildExamFeeCells(ExamPaidFeeModel fee) {
+    return [
+      Expanded(
+        flex: 1,
+        child: Container(
+          padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
+          decoration: BoxDecoration(
+            color: Colors.blue[50],
+            borderRadius: BorderRadius.circular(6.r),
+          ),
+          child: Text(
+            fee.rollNo ?? 'N/A',
+            style: GoogleFonts.poppins(
+              fontSize: 14.sp,
+              fontWeight: FontWeight.w600,
+              color: Colors.blue[700],
             ),
-            const SizedBox(height: 16),
-
-            // Exam Details
-            Row(
-              children: [
-                Expanded(child: _buildDetailItem('Exam', fee.examName)),
-                Expanded(
-                  child: _buildDetailItem(
-                    'Class',
-                    '${fee.className ?? 'N/A'} ${fee.section ?? ''}'.trim(),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-
-            // Payment Details
-            Row(
-              children: [
-                Expanded(
-                  child: _buildAmountItem(
-                    'Paid Amount',
-                    '₹${fee.paidAmount.toStringAsFixed(2)}',
-                    Colors.green,
-                  ),
-                ),
-                Expanded(
-                  child: _buildDetailItem('Payment Mode', fee.paymentMode),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-
-            // Payment Date
-            Row(
-              children: [
-                const Icon(Icons.calendar_today, size: 16, color: Colors.grey),
-                const SizedBox(width: 4),
-                Text(
-                  'Paid on: ${_formatDate(fee.paymentDate)}',
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                ),
-              ],
-            ),
-          ],
+            textAlign: TextAlign.center,
+          ),
         ),
       ),
-    );
+      Expanded(
+        flex: 2,
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
+          child: Text(
+            fee.studentName ?? 'Unknown Student',
+            style: GoogleFonts.poppins(
+              fontSize: 14.sp,
+              fontWeight: FontWeight.w500,
+              color: Colors.black87,
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ),
+      Expanded(
+        flex: 2,
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                fee.examName ?? 'N/A',
+                style: GoogleFonts.poppins(
+                  fontSize: 14.sp,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
+                ),
+              ),
+              Text(
+                '${fee.className ?? 'N/A'} ${fee.section ?? ''}'.trim(),
+                style: GoogleFonts.poppins(
+                  fontSize: 12.sp,
+                  color: Colors.grey[600],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      Expanded(
+        flex: 1,
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
+          child: Text(
+            'Rs. ${fee.paidAmount.toStringAsFixed(0)}',
+            style: GoogleFonts.poppins(
+              fontSize: 14.sp,
+              fontWeight: FontWeight.w600,
+              color: Colors.green[700],
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      ),
+      Expanded(
+        flex: 1,
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
+          child: Text(
+            fee.paymentMode ?? 'N/A',
+            style: GoogleFonts.poppins(
+              fontSize: 12.sp,
+              fontWeight: FontWeight.w500,
+              color: Colors.grey[600],
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      ),
+      Expanded(
+        flex: 1,
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
+          child: Text(
+            fee.paymentDate != null
+                ? DateFormat('dd/MM/yyyy').format(fee.paymentDate!)
+                : 'N/A',
+            style: GoogleFonts.poppins(
+              fontSize: 12.sp,
+              fontWeight: FontWeight.w500,
+              color: Colors.black87,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      ),
+      Expanded(
+        flex: 1,
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
+          child: Text(
+            (fee.remainingAmount ?? 0.0) > 0
+                ? 'PKR ${(fee.remainingAmount ?? 0.0).toStringAsFixed(0)}'
+                : 'PKR 0',
+            style: GoogleFonts.poppins(
+              fontSize: 14.sp,
+              fontWeight: FontWeight.w600,
+              color: (fee.remainingAmount ?? 0.0) > 0
+                  ? Colors.orange[700]
+                  : Colors.green[700],
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      ),
+      Expanded(
+        flex: 1,
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 6.h),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                onPressed: () => _showExamFeeDetailsDialog(fee),
+                icon: Icon(Icons.visibility, size: 18.sp),
+                tooltip: 'View Details',
+                color: Colors.blue[600],
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.blue[50],
+                  padding: EdgeInsets.all(6.w),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ];
   }
 
-  Widget _buildDetailItem(String label, String value) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey[600],
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: Colors.black87,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildAmountItem(String label, String value, Color color) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey[600],
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: color,
-          ),
-        ),
-      ],
-    );
-  }
-
-  String _formatDate(DateTime date) {
-    return '${date.day}/${date.month}/${date.year}';
+  void _showExamFeeDetailsDialog(ExamPaidFeeModel fee) {
+    Get.dialog(ExamFeeDetailsDialog(fee: fee), barrierDismissible: true);
   }
 }

@@ -15,6 +15,10 @@ class ExamPaidFeeModel {
   final String? className;
   final String? section;
 
+  // Additional fields for aggregated view
+  final double? totalFee;
+  final double? remainingAmount;
+
   ExamPaidFeeModel({
     this.id,
     this.pendingExamFeeId,
@@ -29,6 +33,8 @@ class ExamPaidFeeModel {
     this.rollNo,
     this.className,
     this.section,
+    this.totalFee,
+    this.remainingAmount,
   });
 
   Map<String, dynamic> toJson() {
@@ -82,6 +88,8 @@ class ExamPaidFeeModel {
     String? rollNo,
     String? className,
     String? section,
+    double? totalFee,
+    double? remainingAmount,
   }) {
     return ExamPaidFeeModel(
       id: id ?? this.id,
@@ -97,6 +105,8 @@ class ExamPaidFeeModel {
       rollNo: rollNo ?? this.rollNo,
       className: className ?? this.className,
       section: section ?? this.section,
+      totalFee: totalFee ?? this.totalFee,
+      remainingAmount: remainingAmount ?? this.remainingAmount,
     );
   }
 }

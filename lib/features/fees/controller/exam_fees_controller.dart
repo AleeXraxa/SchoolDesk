@@ -35,7 +35,11 @@ class ExamFeesController extends GetxController {
   Future<void> loadExamFees() async {
     try {
       isLoading.value = true;
-      await Future.wait([loadPendingFees(), loadPaidFees()]);
+      await Future.wait([
+        loadPendingFees(),
+        loadPaidFees(),
+        loadAggregatedPaidFees(),
+      ]);
       _calculateStatistics();
     } catch (e) {
       print('ExamFeesController: Error loading exam fees: $e');
@@ -1406,6 +1410,122 @@ class ExamFeesController extends GetxController {
     } finally {
       isLoading.value = false;
     }
+  }
+
+  Future<List<ExamPaidFeeModel>> getAggregatedPaidFees() async {
+    try {
+      // Get all paid exam fees
+      final fees = await ExamFeesService.getPaidExamFees();
+
+      // Group fees by student and exam
+      final Map<String, List<ExamPaidFeeModel>> groupedFees = {};
+
+      for (final fee in fees) {
+        final key = '${fee.studentId}_${fee.examName}';
+        if (!groupedFees.containsKey(key)) {
+          groupedFees[key] = [];
+        }
+        groupedFees[key]!.add(fee);
+      }
+
+      // Create aggregated fees
+      final List<ExamPaidFeeModel> aggregatedFees = [];
+
+      for (final entry in groupedFees.entries) {
+        final feeList = entry.value;
+        final firstFee = feeList.first;
+
+        // Calculate totals
+        final totalPaidAmount = feeList.fold<double>(
+          0.0,
+          (sum, fee) => sum + fee.paidAmount,
+        );
+
+        // Use the most recent payment date
+        final mostRecentPayment = feeList.reduce(
+          (a, b) => a.paymentDate.isAfter(b.paymentDate) ? a : b,
+        );
+
+        // Get the total fee from the pending exam fee to calculate remaining amount
+        double totalFee = 0.0;
+        try {
+          // Try to get the pending fee to get total amount
+          final pendingFees = await ExamFeesService.getPendingExamFees();
+          final pendingFee = pendingFees.firstWhere(
+            (fee) =>
+                fee.studentId == firstFee.studentId &&
+                fee.examName == firstFee.examName,
+            orElse: () => ExamFeeModel(
+              studentId: firstFee.studentId,
+              classId: firstFee.classId,
+              examName: firstFee.examName,
+              examMonth: '',
+              totalFee: 0.0,
+              paidAmount: 0.0,
+              status: 'Pending',
+            ),
+          );
+          totalFee = pendingFee.totalFee;
+        } catch (e) {
+          // If we can't get the pending fee, assume the paid amount is the total
+          totalFee = totalPaidAmount;
+        }
+
+        aggregatedFees.add(
+          ExamPaidFeeModel(
+            id: firstFee.id,
+            pendingExamFeeId: firstFee.pendingExamFeeId,
+            studentId: firstFee.studentId,
+            classId: firstFee.classId,
+            examName: firstFee.examName,
+            paidAmount: totalPaidAmount,
+            paymentDate: mostRecentPayment.paymentDate,
+            paymentMode: mostRecentPayment.paymentMode,
+            createdAt: firstFee.createdAt,
+            studentName: firstFee.studentName,
+            rollNo: firstFee.rollNo,
+            className: firstFee.className,
+            section: firstFee.section,
+            totalFee: totalFee,
+            remainingAmount: totalFee - totalPaidAmount,
+          ),
+        );
+      }
+
+      // Sort by most recent payment date
+      aggregatedFees.sort((a, b) => b.paymentDate.compareTo(a.paymentDate));
+
+      return aggregatedFees;
+    } catch (e) {
+      print('ExamFeesController: Error getting aggregated paid fees: $e');
+      return [];
+    }
+  }
+
+  RxList<ExamPaidFeeModel> aggregatedPaidFees = <ExamPaidFeeModel>[].obs;
+
+  Future<void> loadAggregatedPaidFees() async {
+    try {
+      isLoading.value = true;
+      final fees = await getAggregatedPaidFees();
+      aggregatedPaidFees.assignAll(fees);
+    } catch (e) {
+      print('ExamFeesController: Error loading aggregated paid fees: $e');
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  List<ExamPaidFeeModel> getDisplayedAggregatedPaidFees() {
+    if (searchQuery.value.isEmpty) {
+      return aggregatedPaidFees;
+    }
+    return aggregatedPaidFees.where((fee) {
+      final studentName = fee.studentName?.toLowerCase() ?? '';
+      final rollNo = fee.rollNo?.toLowerCase() ?? '';
+      final query = searchQuery.value.toLowerCase();
+      return studentName.contains(query) || rollNo.contains(query);
+    }).toList();
   }
 
   void updateSearchQuery(String query) {
