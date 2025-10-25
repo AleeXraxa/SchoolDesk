@@ -12,6 +12,10 @@ import '../features/fees/view/fees_view.dart';
 import '../features/fees/controller/fees_controller.dart';
 import '../features/fees/view/monthly_fees_view.dart';
 import '../features/fees/controller/monthly_fees_controller.dart';
+import '../features/fees/view/exam_fees_view.dart';
+import '../features/fees/controller/exam_fees_controller.dart';
+import '../features/fees/view/misc_fees_view.dart';
+import '../features/fees/controller/misc_fees_controller.dart';
 
 class AppPages {
   static final pages = [
@@ -55,6 +59,20 @@ class AppPages {
       page: () => const MonthlyFeesView(),
       binding: BindingsBuilder(() {
         Get.lazyPut<MonthlyFeesController>(() => MonthlyFeesController());
+      }),
+    ),
+    GetPage(
+      name: AppRoutes.examFees,
+      page: () => const ExamFeesView(),
+      binding: BindingsBuilder(() {
+        Get.lazyPut<ExamFeesController>(() => ExamFeesController());
+      }),
+    ),
+    GetPage(
+      name: AppRoutes.miscFees,
+      page: () => const MiscFeesView(),
+      binding: BindingsBuilder(() {
+        Get.lazyPut<MiscFeesController>(() => MiscFeesController());
       }),
     ),
     // Add more pages here as needed

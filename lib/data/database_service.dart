@@ -42,7 +42,7 @@ class DatabaseService {
       final db = await databaseFactory.openDatabase(
         dbPath,
         options: OpenDatabaseOptions(
-          version: 8,
+          version: 9,
           onCreate: _onCreate,
           onUpgrade: _onUpgrade,
           onOpen: _onOpen,
@@ -330,6 +330,54 @@ class DatabaseService {
         );
       }
 
+      if (oldVersion < 9) {
+        print(
+          'DatabaseService: Creating misc_fees_pending and misc_fees_paid tables for version 9',
+        );
+
+        // Create misc_fees_pending table
+        await db.execute('''
+          CREATE TABLE misc_fees_pending (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            student_id INTEGER NOT NULL,
+            class_id INTEGER NOT NULL,
+            misc_fee_type TEXT NOT NULL,
+            month TEXT NOT NULL,
+            total_fee REAL NOT NULL DEFAULT 0.00,
+            paid_amount REAL NOT NULL DEFAULT 0.00,
+            status TEXT NOT NULL DEFAULT 'Pending',
+            due_date TEXT,
+            description TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE,
+            FOREIGN KEY (class_id) REFERENCES classes (id) ON DELETE CASCADE
+          )
+        ''');
+
+        // Create misc_fees_paid table
+        await db.execute('''
+          CREATE TABLE misc_fees_paid (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            pending_misc_fee_id INTEGER,
+            student_id INTEGER NOT NULL,
+            class_id INTEGER NOT NULL,
+            misc_fee_type TEXT NOT NULL,
+            paid_amount REAL NOT NULL,
+            payment_date TEXT NOT NULL,
+            payment_mode TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY (pending_misc_fee_id) REFERENCES misc_fees_pending (id) ON DELETE CASCADE,
+            FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE,
+            FOREIGN KEY (class_id) REFERENCES classes (id) ON DELETE CASCADE
+          )
+        ''');
+
+        print(
+          'DatabaseService: Created misc_fees_pending and misc_fees_paid tables',
+        );
+      }
+
       print('DatabaseService: Database upgrade completed');
     } catch (e, stackTrace) {
       print('DatabaseService: Error during database upgrade: $e');
@@ -430,6 +478,60 @@ class DatabaseService {
           )
         ''');
         print('DatabaseService: Monthly payment history table created');
+      }
+
+      // Check if misc_fees_pending table exists, create if not
+      final miscPendingTables = await db.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='misc_fees_pending'",
+      );
+
+      if (miscPendingTables.isEmpty) {
+        print('DatabaseService: Creating misc_fees_pending table...');
+        await db.execute('''
+          CREATE TABLE misc_fees_pending (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            student_id INTEGER NOT NULL,
+            class_id INTEGER NOT NULL,
+            misc_fee_type TEXT NOT NULL,
+            month TEXT NOT NULL,
+            total_fee REAL NOT NULL DEFAULT 0.00,
+            paid_amount REAL NOT NULL DEFAULT 0.00,
+            status TEXT NOT NULL DEFAULT 'Pending',
+            due_date TEXT,
+            description TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE,
+            FOREIGN KEY (class_id) REFERENCES classes (id) ON DELETE CASCADE
+          )
+        ''');
+        print('DatabaseService: Misc fees pending table created');
+      }
+
+      // Check if misc_fees_paid table exists, create if not
+      final miscPaidTables = await db.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='misc_fees_paid'",
+      );
+
+      if (miscPaidTables.isEmpty) {
+        print('DatabaseService: Creating misc_fees_paid table...');
+        await db.execute('''
+          CREATE TABLE misc_fees_paid (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            pending_misc_fee_id INTEGER,
+            student_id INTEGER NOT NULL,
+            class_id INTEGER NOT NULL,
+            misc_fee_type TEXT NOT NULL,
+            paid_amount REAL NOT NULL,
+            payment_date TEXT NOT NULL,
+            payment_mode TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY (pending_misc_fee_id) REFERENCES misc_fees_pending (id) ON DELETE CASCADE,
+            FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE,
+            FOREIGN KEY (class_id) REFERENCES classes (id) ON DELETE CASCADE
+          )
+        ''');
+        print('DatabaseService: Misc fees paid table created');
       }
     } catch (e, stackTrace) {
       print('DatabaseService: Error during database open: $e');

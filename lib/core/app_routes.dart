@@ -5,5 +5,7 @@ class AppRoutes {
   static const String classes = '/classes';
   static const String fees = '/fees';
   static const String monthlyFees = '/monthly-fees';
+  static const String examFees = '/exam-fees';
+  static const String miscFees = '/misc-fees';
   // Add more routes here as needed
 }
