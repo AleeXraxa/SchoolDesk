@@ -1490,6 +1490,7 @@ class ExamFeesController extends GetxController {
             section: firstFee.section,
             totalFee: totalFee,
             remainingAmount: totalFee - totalPaidAmount,
+            paymentCount: feeList.length,
           ),
         );
       }

@@ -5,8 +5,6 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/models/misc_fee_model.dart';
 import '../../../data/models/misc_paid_fee_model.dart';
-import '../controller/misc_fees_controller.dart';
-import '../service/misc_fees_service.dart';
 
 class MiscFeeDetailsDialog extends StatefulWidget {
   final dynamic fee; // Can be MiscFeeModel or MiscPaidFeeModel
@@ -22,8 +20,6 @@ class _MiscFeeDetailsDialogState extends State<MiscFeeDetailsDialog>
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
   late Animation<double> _fadeAnimation;
-  List<MiscPaidFeeModel> _paymentHistory = [];
-  bool _isLoadingHistory = false;
 
   @override
   void initState() {
@@ -42,7 +38,6 @@ class _MiscFeeDetailsDialogState extends State<MiscFeeDetailsDialog>
     );
 
     _animationController.forward();
-    _loadPaymentHistory();
   }
 
   @override
@@ -149,14 +144,6 @@ class _MiscFeeDetailsDialogState extends State<MiscFeeDetailsDialog>
                                   _buildStudentDetailsCard(),
                                   SizedBox(height: 20.h),
                                   _buildFeeBreakdownCard(),
-                                  if (_paymentHistory.isNotEmpty) ...[
-                                    SizedBox(height: 20.h),
-                                    _buildPaymentHistoryCard(),
-                                  ],
-                                  if (widget.fee is MiscFeeModel) ...[
-                                    SizedBox(height: 20.h),
-                                    _buildPaymentActions(),
-                                  ],
                                   SizedBox(height: 20.h),
                                   _buildActionButtons(),
                                 ],
@@ -472,22 +459,28 @@ class _MiscFeeDetailsDialogState extends State<MiscFeeDetailsDialog>
     return Padding(
       padding: EdgeInsets.only(bottom: 8.h),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: GoogleFonts.poppins(
-              fontSize: 14.sp,
-              color: Colors.grey[600],
-              fontWeight: FontWeight.w500,
+          Expanded(
+            flex: 2,
+            child: Text(
+              label,
+              style: GoogleFonts.poppins(
+                fontSize: 14.sp,
+                color: Colors.grey[600],
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
-          Text(
-            value,
-            style: GoogleFonts.poppins(
-              fontSize: 14.sp,
-              color: valueColor,
-              fontWeight: FontWeight.w600,
+          Expanded(
+            flex: 1,
+            child: Text(
+              value,
+              style: GoogleFonts.poppins(
+                fontSize: 14.sp,
+                color: valueColor,
+                fontWeight: FontWeight.w600,
+              ),
+              textAlign: TextAlign.right,
             ),
           ),
         ],
@@ -495,525 +488,28 @@ class _MiscFeeDetailsDialogState extends State<MiscFeeDetailsDialog>
     );
   }
 
-  Widget _buildPaymentHistoryCard() {
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
-      child: Padding(
-        padding: EdgeInsets.all(16.w),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.history, color: AppColors.primary, size: 20.sp),
-                SizedBox(width: 8.w),
-                Text(
-                  'Payment History',
-                  style: GoogleFonts.poppins(
-                    fontSize: 16.sp,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black87,
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 16.h),
-            if (_isLoadingHistory)
-              Center(
-                child: Padding(
-                  padding: EdgeInsets.all(20.w),
-                  child: CircularProgressIndicator(),
-                ),
-              )
-            else if (_paymentHistory.isEmpty)
-              Center(
-                child: Padding(
-                  padding: EdgeInsets.all(20.w),
-                  child: Text(
-                    'No payment records yet',
-                    style: GoogleFonts.poppins(
-                      fontSize: 14.sp,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                ),
-              )
-            else
-              Column(
-                children: _paymentHistory.map((payment) {
-                  return Container(
-                    margin: EdgeInsets.only(bottom: 8.h),
-                    padding: EdgeInsets.all(12.w),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[50],
-                      borderRadius: BorderRadius.circular(8.r),
-                      border: Border.all(color: Colors.grey[200]!),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Rs. ${payment.paidAmount.toStringAsFixed(0)}',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 14.sp,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.green[700],
-                                ),
-                              ),
-                              Text(
-                                '${payment.paymentDate.day}/${payment.paymentDate.month}/${payment.paymentDate.year}',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 12.sp,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 8.w,
-                            vertical: 4.h,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12.r),
-                          ),
-                          child: Text(
-                            payment.paymentMode,
-                            style: GoogleFonts.poppins(
-                              fontSize: 12.sp,
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }).toList(),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPaymentActions() {
-    final fee = widget.fee as MiscFeeModel;
-    if (fee.isPaid) return const SizedBox.shrink();
-
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
-      child: Padding(
-        padding: EdgeInsets.all(16.w),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.payment, color: AppColors.primary, size: 20.sp),
-                SizedBox(width: 8.w),
-                Text(
-                  'Payment Actions',
-                  style: GoogleFonts.poppins(
-                    fontSize: 16.sp,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black87,
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 16.h),
-            SizedBox(
-              width: double.infinity,
-              height: 45.h,
-              child: ElevatedButton.icon(
-                onPressed: () => _showPaymentDialog(context, fee),
-                icon: Icon(Icons.payment, size: 18.sp),
-                label: Text(
-                  'Record Payment',
-                  style: GoogleFonts.poppins(
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8.r),
-                  ),
-                  elevation: 2,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildActionButtons() {
-    return Row(
-      children: [
-        Expanded(
-          child: OutlinedButton(
-            onPressed: _closeDialog,
-            style: OutlinedButton.styleFrom(
-              padding: EdgeInsets.symmetric(vertical: 14.h),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8.r),
-              ),
-              side: BorderSide(color: Colors.grey[300]!),
-            ),
-            child: Text(
-              'Close',
-              style: GoogleFonts.poppins(
-                fontSize: 14.sp,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey[700],
-              ),
-            ),
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton(
+        onPressed: _closeDialog,
+        style: OutlinedButton.styleFrom(
+          padding: EdgeInsets.symmetric(vertical: 12.h),
+          side: BorderSide(color: Colors.grey[300]!),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8.r),
           ),
         ),
-      ],
-    );
-  }
-
-  void _showPaymentDialog(BuildContext context, MiscFeeModel fee) {
-    final paymentController = TextEditingController();
-    final remarksController = TextEditingController();
-    final formKey = GlobalKey<FormState>();
-    String selectedPaymentMode = 'Cash';
-
-    final paymentModes = [
-      'Cash',
-      'Card',
-      'Bank Transfer',
-      'Online',
-      'Cheque',
-      'Other',
-    ];
-
-    Get.dialog(
-      Dialog(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        child: TweenAnimationBuilder<double>(
-          tween: Tween(begin: 0.8, end: 1.0),
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.elasticOut,
-          builder: (context, scale, child) {
-            return Transform.scale(
-              scale: scale,
-              child: Container(
-                width: MediaQuery.of(context).size.width > 600 ? 500.w : 450.w,
-                constraints: BoxConstraints(
-                  maxHeight: MediaQuery.of(context).size.height * 0.8,
-                ),
-                padding: EdgeInsets.all(24.w),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20.r),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 20,
-                      spreadRadius: 5,
-                      offset: const Offset(0, 10),
-                    ),
-                  ],
-                ),
-                child: SingleChildScrollView(
-                  child: Form(
-                    key: formKey,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Header
-                        Row(
-                          children: [
-                            Container(
-                              width: 40.w,
-                              height: 40.w,
-                              decoration: BoxDecoration(
-                                color: AppColors.primary.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(10.r),
-                              ),
-                              child: Icon(
-                                Icons.payment,
-                                color: AppColors.primary,
-                                size: 20.sp,
-                              ),
-                            ),
-                            SizedBox(width: 16.w),
-                            Expanded(
-                              child: Text(
-                                'Record Misc Fee Payment',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 20.sp,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.black87,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        SizedBox(height: 24.h),
-
-                        // Payment Form
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Payment Details',
-                              style: GoogleFonts.poppins(
-                                fontSize: 16.sp,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.black87,
-                              ),
-                            ),
-                            SizedBox(height: 16.h),
-
-                            // Payment Amount
-                            TextFormField(
-                              controller: paymentController,
-                              keyboardType: TextInputType.number,
-                              decoration: InputDecoration(
-                                labelText: 'Current Payment Amount (PKR)',
-                                hintText: 'Enter payment amount',
-                                prefixIcon: Icon(
-                                  Icons.attach_money,
-                                  color: AppColors.primary,
-                                ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8.r),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8.r),
-                                  borderSide: BorderSide(
-                                    color: AppColors.primary,
-                                    width: 2,
-                                  ),
-                                ),
-                              ),
-                              validator: (value) {
-                                if (value == null || value.trim().isEmpty) {
-                                  return 'Payment amount is required';
-                                }
-                                final amount = double.tryParse(value);
-                                if (amount == null || amount <= 0) {
-                                  return 'Please enter a valid positive amount';
-                                }
-                                if (amount > fee.remainingAmount) {
-                                  return 'Amount cannot exceed remaining balance of Rs. ${fee.remainingAmount.toStringAsFixed(0)}';
-                                }
-                                return null;
-                              },
-                            ),
-                            SizedBox(height: 16.h),
-
-                            // Mode of Payment
-                            DropdownButtonFormField<String>(
-                              value: selectedPaymentMode,
-                              decoration: InputDecoration(
-                                labelText: 'Mode of Payment',
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8.r),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8.r),
-                                  borderSide: BorderSide(
-                                    color: AppColors.primary,
-                                    width: 2,
-                                  ),
-                                ),
-                              ),
-                              items: paymentModes.map((mode) {
-                                return DropdownMenuItem(
-                                  value: mode,
-                                  child: Text(
-                                    mode,
-                                    style: GoogleFonts.poppins(fontSize: 14.sp),
-                                  ),
-                                );
-                              }).toList(),
-                              onChanged: (value) {
-                                selectedPaymentMode = value ?? 'Cash';
-                              },
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Please select a payment mode';
-                                }
-                                return null;
-                              },
-                            ),
-                            SizedBox(height: 16.h),
-
-                            // Remarks
-                            TextFormField(
-                              controller: remarksController,
-                              maxLines: 3,
-                              decoration: InputDecoration(
-                                labelText: 'Remarks (Optional)',
-                                hintText: 'Add any additional notes or remarks',
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8.r),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8.r),
-                                  borderSide: BorderSide(
-                                    color: AppColors.primary,
-                                    width: 2,
-                                  ),
-                                ),
-                              ),
-                              style: GoogleFonts.poppins(fontSize: 14.sp),
-                            ),
-                          ],
-                        ),
-                        SizedBox(height: 32.h),
-
-                        // Buttons
-                        Row(
-                          children: [
-                            Expanded(
-                              child: OutlinedButton(
-                                onPressed: () => Get.back(),
-                                style: OutlinedButton.styleFrom(
-                                  padding: EdgeInsets.symmetric(vertical: 14.h),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8.r),
-                                  ),
-                                  side: BorderSide(color: Colors.grey[300]!),
-                                ),
-                                child: Text(
-                                  'Cancel',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 14.sp,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.grey[700],
-                                  ),
-                                ),
-                              ),
-                            ),
-                            SizedBox(width: 16.w),
-                            Expanded(
-                              child: ElevatedButton(
-                                onPressed: () async {
-                                  if (formKey.currentState?.validate() ??
-                                      false) {
-                                    final paymentAmount = double.parse(
-                                      paymentController.text,
-                                    );
-
-                                    // Additional validation: check if payment exceeds remaining amount
-                                    if (paymentAmount > fee.remainingAmount) {
-                                      Get.snackbar(
-                                        'Invalid Payment',
-                                        'Payment amount cannot exceed remaining balance of PKR ${fee.remainingAmount.toStringAsFixed(0)}',
-                                        snackPosition: SnackPosition.BOTTOM,
-                                        backgroundColor: Colors.red,
-                                        colorText: Colors.white,
-                                        duration: const Duration(seconds: 3),
-                                      );
-                                      return;
-                                    }
-
-                                    // Process payment
-                                    final controller =
-                                        Get.find<MiscFeesController>();
-                                    final success = await controller
-                                        .processPayment(
-                                          fee.id!,
-                                          paymentAmount,
-                                          selectedPaymentMode,
-                                        );
-
-                                    if (success) {
-                                      Get.back(); // Close payment dialog
-                                      Get.back(); // Close details dialog
-                                      Get.snackbar(
-                                        'Success',
-                                        'Misc fee payment processed successfully',
-                                        snackPosition: SnackPosition.BOTTOM,
-                                        backgroundColor: Colors.green,
-                                        colorText: Colors.white,
-                                      );
-                                    }
-                                  }
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.primary,
-                                  padding: EdgeInsets.symmetric(vertical: 14.h),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8.r),
-                                  ),
-                                  elevation: 2,
-                                ),
-                                child: Text(
-                                  'Pay Now',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 14.sp,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            );
-          },
+        child: Text(
+          'Close',
+          style: GoogleFonts.poppins(
+            fontSize: 14.sp,
+            fontWeight: FontWeight.w600,
+            color: Colors.grey[700],
+          ),
         ),
       ),
-      barrierDismissible: true,
     );
-  }
-
-  Future<void> _loadPaymentHistory() async {
-    if (widget.fee is MiscPaidFeeModel) {
-      setState(() => _isLoadingHistory = true);
-      try {
-        // For paid misc fees, get all individual payment entries for this student and fee type
-        final fee = widget.fee as MiscPaidFeeModel;
-        final paidEntries = await MiscFeesService.getMiscPaidEntriesByStudent(
-          fee.studentId!,
-          fee.miscFeeType!,
-        );
-
-        print('Misc Fee Details → Total Paid Entries: ${paidEntries.length}');
-
-        _paymentHistory = paidEntries;
-      } catch (e) {
-        print('Error loading payment history: $e');
-      } finally {
-        setState(() => _isLoadingHistory = false);
-      }
-    } else if (widget.fee is MiscFeeModel) {
-      setState(() => _isLoadingHistory = true);
-      try {
-        // For pending fees, get payment history by misc fee ID
-        // This would require a service method similar to monthly fees
-        // For now, we'll keep it empty as the current implementation doesn't support partial payments for pending misc fees
-        _paymentHistory = [];
-      } catch (e) {
-        print('Error loading payment history: $e');
-      } finally {
-        setState(() => _isLoadingHistory = false);
-      }
-    }
   }
 
   void _closeDialog() {

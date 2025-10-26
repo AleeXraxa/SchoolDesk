@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_colors.dart';
 import '../controller/monthly_fees_controller.dart';
 import '../../../data/models/monthly_fee_model.dart';
+import '../../../data/models/monthly_paid_fees_model.dart';
 import '../../../data/models/challan_model.dart';
 import '../service/challan_service.dart';
 import 'monthly_fee_details_dialog.dart';
@@ -400,7 +401,25 @@ class MonthlyPendingFeesView extends StatelessWidget {
   }
 
   void _showMonthlyFeeDetailsDialog(MonthlyFeeModel fee) {
-    Get.dialog(MonthlyFeeDetailsDialog(fee: fee), barrierDismissible: true);
+    // Convert MonthlyFeeModel to MonthlyPaidFeesModel for the dialog
+    final convertedFee = MonthlyPaidFeesModel(
+      studentId: fee.studentId,
+      studentName: fee.studentName,
+      rollNo: fee.rollNo,
+      className: fee.className,
+      section: fee.section,
+      month: fee.month ?? '',
+      totalPaidAmount: fee.paidAmount,
+      totalFeeAmount: fee.amount,
+      mostRecentPaymentDate:
+          DateTime.now(), // Placeholder, as pending fees don't have payment dates
+      paymentCount: 1, // Placeholder
+      individualPayments: [], // Empty for pending fees
+    );
+    Get.dialog(
+      MonthlyFeeDetailsDialog(fee: convertedFee),
+      barrierDismissible: true,
+    );
   }
 
   void _showPaymentDialog(

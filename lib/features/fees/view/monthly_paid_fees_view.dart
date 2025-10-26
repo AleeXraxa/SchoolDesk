@@ -4,7 +4,6 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_colors.dart';
 import '../controller/monthly_fees_controller.dart';
-import '../../../data/models/monthly_fee_model.dart';
 import '../../../data/models/monthly_paid_fees_model.dart';
 import 'monthly_fee_details_dialog.dart';
 
@@ -273,14 +272,36 @@ class MonthlyPaidFeesView extends StatelessWidget {
         flex: 2,
         child: Padding(
           padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
-          child: Text(
-            fee.studentName ?? 'Unknown Student',
-            style: GoogleFonts.poppins(
-              fontSize: 14.sp,
-              fontWeight: FontWeight.w500,
-              color: Colors.black87,
-            ),
-            overflow: TextOverflow.ellipsis,
+          child: Row(
+            children: [
+              Text(
+                fee.studentName ?? 'Unknown Student',
+                style: GoogleFonts.poppins(
+                  fontSize: 14.sp,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.black87,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+              if (fee.paymentCount > 1) ...[
+                SizedBox(width: 4.w),
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
+                  decoration: BoxDecoration(
+                    color: Colors.purple[100],
+                    borderRadius: BorderRadius.circular(8.r),
+                  ),
+                  child: Text(
+                    '${fee.paymentCount} entries',
+                    style: GoogleFonts.poppins(
+                      fontSize: 10.sp,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.purple[700],
+                    ),
+                  ),
+                ),
+              ],
+            ],
           ),
         ),
       ),
