@@ -10,6 +10,9 @@ import '../features/classes/view/classes_view.dart';
 import '../features/classes/controller/classes_controller.dart';
 import '../features/fees/view/fees_view.dart';
 import '../features/fees/controller/fees_controller.dart';
+import '../features/fees/view/challan_main_view.dart' as challan_main;
+import '../features/fees/controller/challan_controller.dart';
+import '../features/fees/view/challan_view.dart';
 import '../features/fees/view/monthly_fees_view.dart';
 import '../features/fees/controller/monthly_fees_controller.dart';
 import '../features/fees/view/exam_fees_view.dart';
@@ -52,6 +55,20 @@ class AppPages {
       page: () => const FeesView(),
       binding: BindingsBuilder(() {
         Get.lazyPut<FeesController>(() => FeesController());
+      }),
+    ),
+    GetPage(
+      name: AppRoutes.challans,
+      page: () => const challan_main.ChallanView(),
+      binding: BindingsBuilder(() {
+        Get.lazyPut<ChallanController>(() => ChallanController());
+      }),
+    ),
+    GetPage(
+      name: AppRoutes.challans,
+      page: () => const ChallanView(),
+      binding: BindingsBuilder(() {
+        Get.lazyPut<ChallanController>(() => ChallanController());
       }),
     ),
     GetPage(

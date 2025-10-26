@@ -4,6 +4,7 @@ class AppRoutes {
   static const String students = '/students';
   static const String classes = '/classes';
   static const String fees = '/fees';
+  static const String challans = '/challans';
   static const String monthlyFees = '/monthly-fees';
   static const String examFees = '/exam-fees';
   static const String miscFees = '/misc-fees';

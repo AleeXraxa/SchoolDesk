@@ -13,6 +13,8 @@ import '../../classes/view/classes_view.dart';
 import '../../classes/controller/classes_controller.dart';
 import '../../fees/view/fees_view.dart';
 import '../../fees/controller/fees_controller.dart';
+import '../../fees/view/challan_view.dart';
+import '../../fees/controller/challan_controller.dart';
 
 class DashboardView extends GetView<DashboardController> {
   const DashboardView({super.key});
@@ -37,6 +39,11 @@ class DashboardView extends GetView<DashboardController> {
     // Initialize fees controller for the fees section
     if (!Get.isRegistered<FeesController>()) {
       Get.put(FeesController());
+    }
+
+    // Initialize challan controller for the challan section
+    if (!Get.isRegistered<ChallanController>()) {
+      Get.put(ChallanController());
     }
 
     return Scaffold(
@@ -75,6 +82,8 @@ class DashboardView extends GetView<DashboardController> {
         return ClassesView();
       case 3: // Fees
         return FeesView();
+      case 4: // Challans
+        return ChallanView();
       default: // Default to dashboard
         return Column(
           children: [

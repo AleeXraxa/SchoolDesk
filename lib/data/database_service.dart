@@ -42,7 +42,7 @@ class DatabaseService {
       final db = await databaseFactory.openDatabase(
         dbPath,
         options: OpenDatabaseOptions(
-          version: 9,
+          version: 13,
           onCreate: _onCreate,
           onUpgrade: _onUpgrade,
           onOpen: _onOpen,
@@ -378,6 +378,152 @@ class DatabaseService {
         );
       }
 
+      if (oldVersion < 10) {
+        print('DatabaseService: Creating challans table for version 10');
+
+        // Create challans table
+        await db.execute('''
+          CREATE TABLE challans (
+            challan_id TEXT PRIMARY KEY,
+            student_id TEXT NOT NULL,
+            class_id TEXT,
+            fees_type TEXT NOT NULL,
+            amount REAL NOT NULL,
+            status TEXT NOT NULL DEFAULT 'Generated',
+            date_generated TEXT NOT NULL,
+            reference_fee_id TEXT,
+            date_paid TEXT,
+            payment_mode TEXT,
+            remarks TEXT,
+            month TEXT,
+            exam_details TEXT,
+            fee_details TEXT,
+            FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE
+          )
+        ''');
+
+        print('DatabaseService: Created challans table');
+      }
+
+      if (oldVersion < 11) {
+        print(
+          'DatabaseService: Adding missing columns to challans table for version 11',
+        );
+
+        // Add missing columns to challans table if they don't exist
+        try {
+          await db.execute('ALTER TABLE challans ADD COLUMN month TEXT');
+          print('DatabaseService: Added month column to challans table');
+        } catch (e) {
+          print('DatabaseService: month column might already exist: $e');
+        }
+
+        try {
+          await db.execute('ALTER TABLE challans ADD COLUMN exam_details TEXT');
+          print('DatabaseService: Added exam_details column to challans table');
+        } catch (e) {
+          print('DatabaseService: exam_details column might already exist: $e');
+        }
+
+        try {
+          await db.execute('ALTER TABLE challans ADD COLUMN fee_details TEXT');
+          print('DatabaseService: Added fee_details column to challans table');
+        } catch (e) {
+          print('DatabaseService: fee_details column might already exist: $e');
+        }
+
+        print('DatabaseService: Added missing columns to challans table');
+      }
+
+      if (oldVersion < 12) {
+        print(
+          'DatabaseService: Ensuring all required columns exist in challans table for version 12',
+        );
+
+        // Ensure all required columns exist in challans table
+        try {
+          final columns = await db.rawQuery('PRAGMA table_info(challans)');
+          final columnNames = columns
+              .map((col) => col['name'] as String)
+              .toList();
+
+          final requiredColumns = [
+            'challan_id',
+            'student_id',
+            'class_id',
+            'fees_type',
+            'amount',
+            'status',
+            'date_generated',
+            'reference_fee_id',
+            'date_paid',
+            'payment_mode',
+            'remarks',
+            'month',
+            'exam_details',
+            'fee_details',
+          ];
+
+          for (final column in requiredColumns) {
+            if (!columnNames.contains(column)) {
+              await db.execute('ALTER TABLE challans ADD COLUMN $column TEXT');
+              print('DatabaseService: Added $column column to challans table');
+            }
+          }
+
+          print(
+            'DatabaseService: Ensured all required columns exist in challans table',
+          );
+        } catch (e) {
+          print(
+            'DatabaseService: Error ensuring columns in challans table: $e',
+          );
+        }
+      }
+
+      if (oldVersion < 13) {
+        print('DatabaseService: Fixing challans table schema for version 13');
+
+        // Drop and recreate challans table with correct schema
+        try {
+          // Check if challans table exists
+          final tables = await db.rawQuery(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='challans'",
+          );
+
+          if (tables.isNotEmpty) {
+            // Drop existing table
+            await db.execute('DROP TABLE challans');
+            print('DatabaseService: Dropped existing challans table');
+          }
+
+          // Create challans table with correct schema
+          await db.execute('''
+            CREATE TABLE challans (
+              challan_id TEXT PRIMARY KEY,
+              student_id INTEGER,
+              class_id INTEGER,
+              fees_type TEXT,
+              amount REAL,
+              status TEXT,
+              date_generated TEXT,
+              reference_fee_id INTEGER,
+              date_paid TEXT,
+              payment_mode TEXT,
+              remarks TEXT,
+              month TEXT,
+              exam_details TEXT,
+              fee_details TEXT,
+              FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE
+            )
+          ''');
+
+          print('DatabaseService: Created challans table with correct schema');
+        } catch (e) {
+          print('DatabaseService: Error recreating challans table: $e');
+        }
+      }
+
       print('DatabaseService: Database upgrade completed');
     } catch (e, stackTrace) {
       print('DatabaseService: Error during database upgrade: $e');
@@ -532,6 +678,35 @@ class DatabaseService {
           )
         ''');
         print('DatabaseService: Misc fees paid table created');
+      }
+
+      // Check if challans table exists, create if not
+      final challansTables = await db.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='challans'",
+      );
+
+      if (challansTables.isEmpty) {
+        print('DatabaseService: Creating challans table...');
+        await db.execute('''
+          CREATE TABLE challans (
+            challan_id TEXT PRIMARY KEY,
+            student_id INTEGER,
+            class_id INTEGER,
+            fees_type TEXT,
+            amount REAL,
+            status TEXT,
+            date_generated TEXT,
+            reference_fee_id INTEGER,
+            date_paid TEXT,
+            payment_mode TEXT,
+            remarks TEXT,
+            month TEXT,
+            exam_details TEXT,
+            fee_details TEXT,
+            FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE
+          )
+        ''');
+        print('DatabaseService: Challans table created');
       }
     } catch (e, stackTrace) {
       print('DatabaseService: Error during database open: $e');

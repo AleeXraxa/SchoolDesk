@@ -3,41 +3,42 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import '../controller/misc_fees_controller.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/models/challan_model.dart';
+import '../controller/challan_controller.dart';
 import '../service/challan_service.dart';
-import 'misc_fee_details_dialog.dart';
 
-class MiscPendingFeesView extends StatelessWidget {
-  const MiscPendingFeesView({super.key});
+class ChallanListView extends StatelessWidget {
+  final ChallanSection challanType;
+
+  const ChallanListView({super.key, required this.challanType});
 
   @override
   Widget build(BuildContext context) {
     // Ensure controller is available with error handling
     try {
-      if (!Get.isRegistered<MiscFeesController>()) {
-        Get.put(MiscFeesController(), permanent: true);
+      if (!Get.isRegistered<ChallanController>()) {
+        Get.put(ChallanController(), permanent: true);
       }
-      final controller = Get.find<MiscFeesController>();
+      final challanController = Get.find<ChallanController>();
 
       return Obx(() {
-        if (controller.isLoading.value) {
+        if (challanController.isLoading.value) {
           return Center(
             child: CircularProgressIndicator(color: AppColors.primary),
           );
         }
 
-        final fees = controller.getDisplayedPendingFees();
+        final allChallans = _getAllChallansForSection(challanController);
 
-        if (fees.isEmpty) {
+        if (allChallans.isEmpty) {
           return Column(
             children: [
               // Header - Always show header to maintain consistent layout
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
                 decoration: BoxDecoration(
-                  color: Colors.orange[50],
+                  color: Colors.blue[50],
                   borderRadius: BorderRadius.only(
                     topLeft: Radius.circular(12.r),
                     topRight: Radius.circular(12.r),
@@ -45,14 +46,18 @@ class MiscPendingFeesView extends StatelessWidget {
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.pending, color: Colors.orange[700], size: 20.sp),
+                    Icon(
+                      Icons.receipt_long,
+                      color: Colors.blue[700],
+                      size: 20.sp,
+                    ),
                     SizedBox(width: 8.w),
                     Text(
-                      'Pending Misc Fees (0)',
+                      'All ${_getSectionTitle()} Challans (0)',
                       style: GoogleFonts.poppins(
                         fontSize: 14.sp,
                         fontWeight: FontWeight.w600,
-                        color: Colors.orange[800],
+                        color: Colors.blue[800],
                       ),
                     ),
                   ],
@@ -66,13 +71,13 @@ class MiscPendingFeesView extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(
-                        Icons.pending_actions_outlined,
+                        Icons.receipt_long_outlined,
                         size: 48.sp,
                         color: Colors.grey[400],
                       ),
                       SizedBox(height: 16.h),
                       Text(
-                        'No records found',
+                        'No challans found',
                         style: GoogleFonts.poppins(
                           fontSize: 16.sp,
                           color: Colors.grey[600],
@@ -93,7 +98,7 @@ class MiscPendingFeesView extends StatelessWidget {
             Container(
               padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
               decoration: BoxDecoration(
-                color: Colors.orange[50],
+                color: Colors.blue[50],
                 borderRadius: BorderRadius.only(
                   topLeft: Radius.circular(12.r),
                   topRight: Radius.circular(12.r),
@@ -101,14 +106,18 @@ class MiscPendingFeesView extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.pending, color: Colors.orange[700], size: 20.sp),
+                  Icon(
+                    Icons.receipt_long,
+                    color: Colors.blue[700],
+                    size: 20.sp,
+                  ),
                   SizedBox(width: 8.w),
                   Text(
-                    'Pending Misc Fees (${fees.length})',
+                    'All ${_getSectionTitle()} Challans (${allChallans.length})',
                     style: GoogleFonts.poppins(
                       fontSize: 14.sp,
                       fontWeight: FontWeight.w600,
-                      color: Colors.orange[800],
+                      color: Colors.blue[800],
                     ),
                   ),
                 ],
@@ -151,7 +160,7 @@ class MiscPendingFeesView extends StatelessWidget {
                   Expanded(
                     flex: 2,
                     child: Text(
-                      'Fee Details',
+                      'Due Date',
                       style: GoogleFonts.poppins(
                         fontSize: 14.sp,
                         fontWeight: FontWeight.bold,
@@ -162,19 +171,7 @@ class MiscPendingFeesView extends StatelessWidget {
                   Expanded(
                     flex: 1,
                     child: Text(
-                      'Total Fee',
-                      style: GoogleFonts.poppins(
-                        fontSize: 14.sp,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primary,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                  Expanded(
-                    flex: 1,
-                    child: Text(
-                      'Paid',
+                      'Amount',
                       style: GoogleFonts.poppins(
                         fontSize: 14.sp,
                         fontWeight: FontWeight.bold,
@@ -186,7 +183,7 @@ class MiscPendingFeesView extends StatelessWidget {
                   Expanded(
                     flex: 1,
                     child: Text(
-                      'Remaining',
+                      'Status',
                       style: GoogleFonts.poppins(
                         fontSize: 14.sp,
                         fontWeight: FontWeight.bold,
@@ -214,8 +211,8 @@ class MiscPendingFeesView extends StatelessWidget {
             Expanded(
               child: SingleChildScrollView(
                 child: Column(
-                  children: List.generate(fees.length, (index) {
-                    final fee = fees[index];
+                  children: List.generate(allChallans.length, (index) {
+                    final challan = allChallans[index];
                     final isEvenRow = index % 2 == 0;
 
                     return Container(
@@ -233,7 +230,11 @@ class MiscPendingFeesView extends StatelessWidget {
                         ),
                       ),
                       child: Row(
-                        children: _buildMiscFeeCells(fee, controller, context),
+                        children: _buildChallanCells(
+                          challan,
+                          challanController,
+                          context,
+                        ),
                       ),
                     );
                   }),
@@ -245,7 +246,7 @@ class MiscPendingFeesView extends StatelessWidget {
       });
     } catch (e, stackTrace) {
       // Log the error for debugging
-      print('Error in MiscPendingFeesView build: $e');
+      print('Error in ChallanListView build: $e');
       print('Stack trace: $stackTrace');
 
       // Fallback UI for when controller is not available
@@ -256,7 +257,7 @@ class MiscPendingFeesView extends StatelessWidget {
             Icon(Icons.error_outline, size: 48.sp, color: Colors.red[400]),
             SizedBox(height: 16.h),
             Text(
-              'Unable to load misc fees',
+              'Unable to load challans',
               style: GoogleFonts.poppins(
                 fontSize: 16.sp,
                 color: Colors.red[600],
@@ -277,9 +278,31 @@ class MiscPendingFeesView extends StatelessWidget {
     }
   }
 
-  List<Widget> _buildMiscFeeCells(
-    dynamic fee,
-    MiscFeesController controller,
+  List<ChallanModel> _getAllChallansForSection(ChallanController controller) {
+    final allChallans = controller.getChallansForSection(challanType);
+
+    // Sort by date generated (most recent first)
+    allChallans.sort((a, b) => b.dateGenerated.compareTo(a.dateGenerated));
+
+    return allChallans;
+  }
+
+  String _getSectionTitle() {
+    switch (challanType) {
+      case ChallanSection.admissionChallans:
+        return 'Admission';
+      case ChallanSection.monthlyChallans:
+        return 'Monthly';
+      case ChallanSection.examChallans:
+        return 'Exam';
+      case ChallanSection.miscChallans:
+        return 'Misc';
+    }
+  }
+
+  List<Widget> _buildChallanCells(
+    ChallanModel challan,
+    ChallanController controller,
     BuildContext context,
   ) {
     return [
@@ -292,7 +315,7 @@ class MiscPendingFeesView extends StatelessWidget {
             borderRadius: BorderRadius.circular(6.r),
           ),
           child: Text(
-            fee.rollNo ?? 'N/A',
+            challan.challanId,
             style: GoogleFonts.poppins(
               fontSize: 14.sp,
               fontWeight: FontWeight.w600,
@@ -307,7 +330,8 @@ class MiscPendingFeesView extends StatelessWidget {
         child: Padding(
           padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
           child: Text(
-            fee.studentName ?? 'Unknown Student',
+            challan
+                .studentId, // For now, show student ID - in real app, join with students table
             style: GoogleFonts.poppins(
               fontSize: 14.sp,
               fontWeight: FontWeight.w500,
@@ -321,25 +345,13 @@ class MiscPendingFeesView extends StatelessWidget {
         flex: 2,
         child: Padding(
           padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                fee.miscFeeType ?? 'N/A',
-                style: GoogleFonts.poppins(
-                  fontSize: 14.sp,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black87,
-                ),
-              ),
-              Text(
-                '${fee.className ?? 'N/A'} ${fee.section ?? ''}'.trim(),
-                style: GoogleFonts.poppins(
-                  fontSize: 12.sp,
-                  color: Colors.grey[600],
-                ),
-              ),
-            ],
+          child: Text(
+            DateFormat('dd/MM/yyyy').format(challan.dateGenerated),
+            style: GoogleFonts.poppins(
+              fontSize: 14.sp,
+              fontWeight: FontWeight.w500,
+              color: Colors.black87,
+            ),
           ),
         ),
       ),
@@ -348,7 +360,7 @@ class MiscPendingFeesView extends StatelessWidget {
         child: Padding(
           padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
           child: Text(
-            'PKR ${fee.totalFee?.toStringAsFixed(0) ?? '0'}',
+            'PKR ${challan.amount.toStringAsFixed(0)}',
             style: GoogleFonts.poppins(
               fontSize: 14.sp,
               fontWeight: FontWeight.w600,
@@ -362,31 +374,29 @@ class MiscPendingFeesView extends StatelessWidget {
         flex: 1,
         child: Padding(
           padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
-          child: Text(
-            'PKR ${fee.paidAmount?.toStringAsFixed(0) ?? '0'}',
-            style: GoogleFonts.poppins(
-              fontSize: 14.sp,
-              fontWeight: FontWeight.w500,
-              color: Colors.green[700],
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+            decoration: BoxDecoration(
+              color: challan.status == 'Paid'
+                  ? Colors.green[50]
+                  : challan.status == 'Overdue'
+                  ? Colors.red[50]
+                  : Colors.orange[50],
+              borderRadius: BorderRadius.circular(12.r),
             ),
-            textAlign: TextAlign.center,
-          ),
-        ),
-      ),
-      Expanded(
-        flex: 1,
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
-          child: Text(
-            'PKR ${fee.remainingAmount?.toStringAsFixed(0) ?? '0'}',
-            style: GoogleFonts.poppins(
-              fontSize: 14.sp,
-              fontWeight: FontWeight.w600,
-              color: fee.remainingAmount > 0
-                  ? Colors.orange[700]
-                  : Colors.green[700],
+            child: Text(
+              challan.status,
+              style: GoogleFonts.poppins(
+                fontSize: 12.sp,
+                fontWeight: FontWeight.w600,
+                color: challan.status == 'Paid'
+                    ? Colors.green[700]
+                    : challan.status == 'Overdue'
+                    ? Colors.red[700]
+                    : Colors.orange[700],
+              ),
+              textAlign: TextAlign.center,
             ),
-            textAlign: TextAlign.center,
           ),
         ),
       ),
@@ -399,18 +409,7 @@ class MiscPendingFeesView extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               IconButton(
-                onPressed: () => _showPaymentDialog(context, fee, controller),
-                icon: Icon(Icons.payment, size: 18.sp),
-                tooltip: 'Pay Fee',
-                color: Colors.green[600],
-                style: IconButton.styleFrom(
-                  backgroundColor: Colors.green[50],
-                  padding: EdgeInsets.all(6.w),
-                ),
-              ),
-              SizedBox(width: 4.w),
-              IconButton(
-                onPressed: () => _showMiscFeeDetailsDialog(fee),
+                onPressed: () => _showChallanDetailsDialog(challan),
                 icon: Icon(Icons.visibility, size: 18.sp),
                 tooltip: 'View Details',
                 color: Colors.blue[600],
@@ -419,6 +418,20 @@ class MiscPendingFeesView extends StatelessWidget {
                   padding: EdgeInsets.all(6.w),
                 ),
               ),
+              if (challan.status != 'Paid') ...[
+                SizedBox(width: 4.w),
+                IconButton(
+                  onPressed: () =>
+                      _showPaymentDialog(context, challan, controller),
+                  icon: Icon(Icons.payment, size: 18.sp),
+                  tooltip: 'Pay Challan',
+                  color: Colors.green[600],
+                  style: IconButton.styleFrom(
+                    backgroundColor: Colors.green[50],
+                    padding: EdgeInsets.all(6.w),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -426,19 +439,166 @@ class MiscPendingFeesView extends StatelessWidget {
     ];
   }
 
-  void _showMiscFeeDetailsDialog(dynamic fee) {
-    Get.dialog(MiscFeeDetailsDialog(fee: fee), barrierDismissible: true);
+  void _showChallanDetailsDialog(ChallanModel challan) {
+    Get.dialog(
+      Dialog(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        child: TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0.8, end: 1.0),
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.elasticOut,
+          builder: (context, scale, child) {
+            return Transform.scale(
+              scale: scale,
+              child: Container(
+                width: 450.w,
+                padding: EdgeInsets.all(24.w),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20.r),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 20,
+                      spreadRadius: 5,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Header
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.receipt_long,
+                          color: AppColors.primary,
+                          size: 24.sp,
+                        ),
+                        SizedBox(width: 12.w),
+                        Text(
+                          'Challan Details',
+                          style: GoogleFonts.poppins(
+                            fontSize: 18.sp,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 20.h),
+
+                    // Challan Details
+                    Container(
+                      padding: EdgeInsets.all(16.w),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[50],
+                        borderRadius: BorderRadius.circular(12.r),
+                      ),
+                      child: Column(
+                        children: [
+                          _buildDetailRow('Student ID', challan.studentId),
+                          SizedBox(height: 12.h),
+                          _buildDetailRow('Challan ID', challan.challanId),
+                          SizedBox(height: 12.h),
+                          _buildDetailRow('Fees Type', challan.feesType),
+                          SizedBox(height: 12.h),
+                          _buildDetailRow(
+                            'Generated Date',
+                            DateFormat(
+                              'dd/MM/yyyy',
+                            ).format(challan.dateGenerated),
+                          ),
+                          SizedBox(height: 12.h),
+                          _buildDetailRow(
+                            'Amount',
+                            'PKR ${challan.amount.toStringAsFixed(0)}',
+                          ),
+                          SizedBox(height: 12.h),
+                          _buildDetailRow('Status', challan.status),
+                          if (challan.datePaid != null) ...[
+                            SizedBox(height: 12.h),
+                            _buildDetailRow(
+                              'Paid Date',
+                              DateFormat(
+                                'dd/MM/yyyy',
+                              ).format(challan.datePaid!),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+
+                    SizedBox(height: 24.h),
+
+                    // Close Button
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () => Get.back(),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          padding: EdgeInsets.symmetric(vertical: 12.h),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8.r),
+                          ),
+                        ),
+                        child: Text(
+                          'Close',
+                          style: GoogleFonts.poppins(
+                            fontSize: 14.sp,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+      barrierDismissible: true,
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 14.sp,
+            fontWeight: FontWeight.w500,
+            color: Colors.grey[700],
+          ),
+        ),
+        Text(
+          value,
+          style: GoogleFonts.poppins(
+            fontSize: 14.sp,
+            fontWeight: FontWeight.w600,
+            color: Colors.black87,
+          ),
+        ),
+      ],
+    );
   }
 
   void _showPaymentDialog(
     BuildContext context,
-    dynamic fee,
-    MiscFeesController controller,
+    ChallanModel challan,
+    ChallanController controller,
   ) {
     final paymentController = TextEditingController();
     final remarksController = TextEditingController();
     final formKey = GlobalKey<FormState>();
-    String selectedPaymentMode = 'Cash'; // Default payment mode
+    String selectedPaymentMode = 'Cash';
 
     final paymentModes = [
       'Cash',
@@ -503,7 +663,7 @@ class MiscPendingFeesView extends StatelessWidget {
                             SizedBox(width: 16.w),
                             Expanded(
                               child: Text(
-                                'Pay Misc Fees',
+                                'Pay Challan',
                                 style: GoogleFonts.poppins(
                                   fontSize: 20.sp,
                                   fontWeight: FontWeight.w600,
@@ -530,14 +690,14 @@ class MiscPendingFeesView extends StatelessWidget {
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    'Total Fees',
+                                    'Challan Amount',
                                     style: GoogleFonts.poppins(
                                       fontSize: 14.sp,
                                       color: Colors.grey[700],
                                     ),
                                   ),
                                   Text(
-                                    'PKR ${fee.totalFee?.toStringAsFixed(0) ?? '0'}',
+                                    'PKR ${challan.amount.toStringAsFixed(0)}',
                                     style: GoogleFonts.poppins(
                                       fontSize: 14.sp,
                                       fontWeight: FontWeight.w600,
@@ -552,104 +712,23 @@ class MiscPendingFeesView extends StatelessWidget {
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    'Total Paid',
+                                    'Generated Date',
                                     style: GoogleFonts.poppins(
                                       fontSize: 14.sp,
                                       color: Colors.grey[700],
                                     ),
                                   ),
                                   Text(
-                                    'PKR ${fee.paidAmount?.toStringAsFixed(0) ?? '0'}',
+                                    DateFormat(
+                                      'dd/MM/yyyy',
+                                    ).format(challan.dateGenerated),
                                     style: GoogleFonts.poppins(
                                       fontSize: 14.sp,
                                       fontWeight: FontWeight.w600,
-                                      color: Colors.green[700],
+                                      color: Colors.black87,
                                     ),
                                   ),
                                 ],
-                              ),
-                              SizedBox(height: 8.h),
-                              Divider(),
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    'Remaining Fees',
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 14.sp,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.grey[800],
-                                    ),
-                                  ),
-                                  Text(
-                                    'PKR ${fee.remainingAmount?.toStringAsFixed(0) ?? '0'}',
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 14.sp,
-                                      fontWeight: FontWeight.w600,
-                                      color: fee.remainingAmount > 0
-                                          ? Colors.orange[700]
-                                          : Colors.green[700],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        SizedBox(height: 24.h),
-
-                        // Student Details Card
-                        Container(
-                          padding: EdgeInsets.all(16.w),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12.r),
-                            border: Border.all(color: Colors.grey[200]!),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Student Information',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 16.sp,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.black87,
-                                ),
-                              ),
-                              SizedBox(height: 12.h),
-                              _buildInfoRow('Roll No', fee.rollNo ?? 'N/A'),
-                              SizedBox(height: 8.h),
-                              _buildInfoRow(
-                                'Student Name',
-                                fee.studentName ?? 'Unknown',
-                              ),
-                              SizedBox(height: 8.h),
-                              _buildInfoRow(
-                                'Fee Type',
-                                fee.miscFeeType ?? 'N/A',
-                              ),
-                              SizedBox(height: 8.h),
-                              _buildInfoRow(
-                                'Class',
-                                '${fee.className ?? 'N/A'} ${fee.section ?? ''}'
-                                    .trim(),
-                              ),
-                              SizedBox(height: 8.h),
-                              _buildInfoRow(
-                                'Total Fees',
-                                'PKR ${fee.totalFee?.toStringAsFixed(0) ?? '0'}',
-                              ),
-                              SizedBox(height: 8.h),
-                              _buildInfoRow(
-                                'Paid Fees',
-                                'PKR ${fee.paidAmount?.toStringAsFixed(0) ?? '0'}',
-                              ),
-                              SizedBox(height: 8.h),
-                              _buildInfoRow(
-                                'Remaining Fees',
-                                'PKR ${fee.remainingAmount?.toStringAsFixed(0) ?? '0'}',
                               ),
                             ],
                           ),
@@ -675,7 +754,7 @@ class MiscPendingFeesView extends StatelessWidget {
                               controller: paymentController,
                               keyboardType: TextInputType.number,
                               decoration: InputDecoration(
-                                labelText: 'Current Payment Amount (PKR)',
+                                labelText: 'Payment Amount (PKR)',
                                 hintText: 'Enter payment amount',
                                 prefixIcon: Icon(
                                   Icons.attach_money,
@@ -700,8 +779,8 @@ class MiscPendingFeesView extends StatelessWidget {
                                 if (amount == null || amount <= 0) {
                                   return 'Please enter a valid positive amount';
                                 }
-                                if (amount > fee.remainingAmount) {
-                                  return 'Amount cannot exceed remaining balance of PKR ${fee.remainingAmount.toStringAsFixed(0)}';
+                                if (amount > challan.amount) {
+                                  return 'Amount cannot exceed challan amount';
                                 }
                                 return null;
                               },
@@ -802,38 +881,33 @@ class MiscPendingFeesView extends StatelessWidget {
                                       paymentController.text,
                                     );
 
-                                    // Additional validation: check if payment exceeds remaining amount
-                                    if (paymentAmount > fee.remainingAmount) {
-                                      Get.snackbar(
-                                        'Invalid Payment',
-                                        'Payment amount cannot exceed remaining balance of PKR ${fee.remainingAmount.toStringAsFixed(0)}',
-                                        snackPosition: SnackPosition.BOTTOM,
-                                        backgroundColor: Colors.red,
-                                        colorText: Colors.white,
-                                        duration: const Duration(seconds: 3),
-                                      );
-                                      return;
-                                    }
-
-                                    // Process payment
-                                    final success = await controller
-                                        .processPayment(
-                                          fee.id,
-                                          paymentAmount,
-                                          selectedPaymentMode,
+                                    // Process payment - update challan status
+                                    final success =
+                                        await ChallanService.updateChallanStatus(
+                                          challan.challanId,
+                                          'Paid',
+                                          datePaid: DateTime.now(),
+                                          paymentMode: selectedPaymentMode,
                                         );
 
                                     if (success) {
-                                      Get.back(); // Close payment dialog
-
-                                      // Show success dialog
-                                      _showPaymentSuccessDialog(
-                                        context,
-                                        fee,
-                                        paymentAmount,
-                                        selectedPaymentMode,
+                                      // Reload challans to show updated status
+                                      await controller.loadChallanData();
+                                    } else {
+                                      throw Exception(
+                                        'Failed to update challan status',
                                       );
                                     }
+
+                                    Get.back(); // Close payment dialog
+
+                                    // Show success dialog with Generate Challan button
+                                    _showPaymentSuccessDialog(
+                                      context,
+                                      challan,
+                                      paymentAmount,
+                                      selectedPaymentMode,
+                                    );
                                   }
                                 },
                                 style: ElevatedButton.styleFrom(
@@ -869,37 +943,9 @@ class MiscPendingFeesView extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: GoogleFonts.poppins(
-            fontSize: 14.sp,
-            color: Colors.grey[600],
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        Expanded(
-          child: Text(
-            value,
-            style: GoogleFonts.poppins(
-              fontSize: 14.sp,
-              color: Colors.black87,
-              fontWeight: FontWeight.w600,
-            ),
-            textAlign: TextAlign.right,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-      ],
-    );
-  }
-
   void _showPaymentSuccessDialog(
     BuildContext context,
-    dynamic fee,
+    ChallanModel challan,
     double paymentAmount,
     String paymentMode,
   ) {
@@ -1027,23 +1073,23 @@ class MiscPendingFeesView extends StatelessWidget {
                               ),
                               child: Column(
                                 children: [
-                                  // Student Info with Icons
+                                  // Challan Info
                                   Row(
                                     children: [
                                       Expanded(
                                         child: _buildSuccessInfoRow(
-                                          'Student Name',
-                                          fee.studentName ?? 'Unknown',
-                                          Icons.person,
+                                          'Challan ID',
+                                          challan.challanId,
+                                          Icons.receipt,
                                           Colors.blue,
                                         ),
                                       ),
                                       SizedBox(width: 16.w),
                                       Expanded(
                                         child: _buildSuccessInfoRow(
-                                          'Roll No',
-                                          fee.rollNo ?? 'N/A',
-                                          Icons.badge,
+                                          'Amount Paid',
+                                          'PKR ${paymentAmount.toStringAsFixed(0)}',
+                                          Icons.attach_money,
                                           Colors.green,
                                         ),
                                       ),
@@ -1053,18 +1099,9 @@ class MiscPendingFeesView extends StatelessWidget {
                                   Divider(color: Colors.grey[300]),
                                   SizedBox(height: 16.h),
 
-                                  // Payment Details
+                                  // Payment Mode
                                   Row(
                                     children: [
-                                      Expanded(
-                                        child: _buildSuccessInfoRow(
-                                          'Paid Amount',
-                                          'PKR ${paymentAmount.toStringAsFixed(0)}',
-                                          Icons.attach_money,
-                                          Colors.green,
-                                        ),
-                                      ),
-                                      SizedBox(width: 16.w),
                                       Expanded(
                                         child: _buildSuccessInfoRow(
                                           'Payment Mode',
@@ -1094,7 +1131,7 @@ class MiscPendingFeesView extends StatelessWidget {
                         return Opacity(
                           opacity: opacity,
                           child: Text(
-                            'The misc fee payment has been processed successfully.',
+                            'The challan payment has been processed successfully.',
                             style: GoogleFonts.inter(
                               fontSize: 14.sp,
                               color: Colors.grey[600],
@@ -1121,65 +1158,12 @@ class MiscPendingFeesView extends StatelessWidget {
                               // Generate Challan Button
                               Expanded(
                                 child: ElevatedButton.icon(
-                                  onPressed: () async {
+                                  onPressed: () {
                                     Get.back(); // Close success dialog
-
-                                    // Automatically create challan without dialog
-                                    final month = DateFormat(
-                                      'MMMM - yyyy',
-                                    ).format(DateTime.now());
-
-                                    print('🧾 Generating Challan...');
-                                    print('Type: Misc');
-                                    print(
-                                      'Student ID: ${fee.studentId?.toString() ?? ''}',
+                                    _showGenerateChallanDialog(
+                                      context,
+                                      challan,
                                     );
-                                    print('Amount: ${fee.remainingAmount}');
-                                    print('Month: $month');
-                                    print(
-                                      'Reference Fee ID: ${fee.id?.toString()}',
-                                    );
-                                    print(
-                                      'Date: ${DateTime.now().toIso8601String()}',
-                                    );
-                                    print(
-                                      'Payment Mode: ${paymentAmount > 0 ? paymentMode : null}',
-                                    );
-                                    print('----------------------------');
-
-                                    final challan = ChallanModel(
-                                      studentId:
-                                          fee.studentId?.toString() ?? '',
-                                      feesType: 'Misc',
-                                      amount: fee.remainingAmount,
-                                      referenceFeeId: fee.id?.toString(),
-                                      month: month,
-                                      feeDetails: fee.miscFeeType,
-                                      datePaid: paymentAmount > 0
-                                          ? DateTime.now()
-                                          : null,
-                                      paymentMode: paymentAmount > 0
-                                          ? paymentMode
-                                          : null,
-                                    );
-
-                                    final success =
-                                        await ChallanService.createChallan(
-                                          challan,
-                                        );
-
-                                    if (success) {
-                                      // Show challan success dialog
-                                      _showChallanSuccessDialog(context);
-                                    } else {
-                                      Get.snackbar(
-                                        'Error',
-                                        'Failed to generate challan. Please try again.',
-                                        snackPosition: SnackPosition.BOTTOM,
-                                        backgroundColor: Colors.red,
-                                        colorText: Colors.white,
-                                      );
-                                    }
                                   },
                                   icon: Icon(
                                     Icons.add_circle_outline,
@@ -1303,174 +1287,14 @@ class MiscPendingFeesView extends StatelessWidget {
     }
   }
 
-  void _showChallanSuccessDialog(BuildContext context) {
-    Get.dialog(
-      Dialog(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        child: TweenAnimationBuilder<double>(
-          tween: Tween(begin: 0.8, end: 1.0),
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.elasticOut,
-          builder: (context, scale, child) {
-            return Transform.scale(
-              scale: scale,
-              child: Container(
-                width: MediaQuery.of(context).size.width > 600 ? 350.w : 300.w,
-                padding: EdgeInsets.all(24.w),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20.r),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 20,
-                      spreadRadius: 5,
-                      offset: const Offset(0, 10),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Success Icon with Animation
-                    TweenAnimationBuilder<double>(
-                      tween: Tween(begin: 0.0, end: 1.0),
-                      duration: const Duration(milliseconds: 500),
-                      curve: Curves.elasticOut,
-                      builder: (context, value, child) {
-                        return Transform.scale(
-                          scale: value,
-                          child: Container(
-                            width: 70.w,
-                            height: 70.w,
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [
-                                  Colors.green[400]!,
-                                  Colors.green[600]!,
-                                ],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.green.withOpacity(0.3),
-                                  blurRadius: 15,
-                                  spreadRadius: 2,
-                                ),
-                              ],
-                            ),
-                            child: Icon(
-                              Icons.check_circle,
-                              color: Colors.white,
-                              size: 35.sp,
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                    SizedBox(height: 20.h),
-
-                    // Title with Animation
-                    TweenAnimationBuilder<double>(
-                      tween: Tween(begin: 0.0, end: 1.0),
-                      duration: const Duration(milliseconds: 500),
-                      curve: Curves.easeOut,
-                      builder: (context, opacity, child) {
-                        return Opacity(
-                          opacity: opacity,
-                          child: Transform.translate(
-                            offset: Offset(0, (1 - opacity) * 20),
-                            child: Text(
-                              'Challan Generated!',
-                              style: GoogleFonts.inter(
-                                fontSize: 22.sp,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black87,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                    SizedBox(height: 12.h),
-
-                    // Success Message with Animation
-                    TweenAnimationBuilder<double>(
-                      tween: Tween(begin: 0.0, end: 1.0),
-                      duration: const Duration(milliseconds: 700),
-                      curve: Curves.easeOut,
-                      builder: (context, opacity, child) {
-                        return Opacity(
-                          opacity: opacity,
-                          child: Text(
-                            '✅ Challan generated successfully!',
-                            style: GoogleFonts.inter(
-                              fontSize: 14.sp,
-                              color: Colors.grey[600],
-                              height: 1.4,
-                              fontWeight: FontWeight.w500,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        );
-                      },
-                    ),
-                    SizedBox(height: 24.h),
-
-                    // OK Button with Animation
-                    TweenAnimationBuilder<double>(
-                      tween: Tween(begin: 0.8, end: 1.0),
-                      duration: const Duration(milliseconds: 800),
-                      curve: Curves.elasticOut,
-                      builder: (context, scale, child) {
-                        return Transform.scale(
-                          scale: scale,
-                          child: SizedBox(
-                            width: double.infinity,
-                            height: 45.h,
-                            child: ElevatedButton(
-                              onPressed: () => Get.back(),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.green[600],
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12.r),
-                                ),
-                                elevation: 4,
-                                shadowColor: Colors.green.withOpacity(0.4),
-                              ),
-                              child: Text(
-                                'OK',
-                                style: GoogleFonts.inter(
-                                  fontSize: 16.sp,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        ),
-      ),
-      barrierDismissible: true,
-    );
-  }
-
-  void _showGenerateChallanDialog(BuildContext context, dynamic fee) {
+  void _showGenerateChallanDialog(
+    BuildContext context,
+    ChallanModel paidChallan,
+  ) {
     final amountController = TextEditingController();
     final remarksController = TextEditingController();
     final formKey = GlobalKey<FormState>();
-    String selectedFeesType = 'Misc'; // Default to Misc type
+    String selectedFeesType = paidChallan.feesType; // Default to same type
 
     final feesTypes = ['Admission', 'Monthly', 'Exam', 'Misc'];
 
@@ -1562,7 +1386,7 @@ class MiscPendingFeesView extends StatelessWidget {
                                     ),
                                   ),
                                   Text(
-                                    fee.studentId?.toString() ?? 'N/A',
+                                    paidChallan.studentId,
                                     style: GoogleFonts.poppins(
                                       fontSize: 14.sp,
                                       fontWeight: FontWeight.w600,
@@ -1577,36 +1401,14 @@ class MiscPendingFeesView extends StatelessWidget {
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    'Student Name',
+                                    'Previous Challan',
                                     style: GoogleFonts.poppins(
                                       fontSize: 14.sp,
                                       color: Colors.grey[700],
                                     ),
                                   ),
                                   Text(
-                                    fee.studentName ?? 'Unknown',
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 14.sp,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.black87,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              SizedBox(height: 8.h),
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    'Fee Type',
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 14.sp,
-                                      color: Colors.grey[700],
-                                    ),
-                                  ),
-                                  Text(
-                                    fee.miscFeeType ?? 'N/A',
+                                    paidChallan.challanId,
                                     style: GoogleFonts.poppins(
                                       fontSize: 14.sp,
                                       fontWeight: FontWeight.w600,
@@ -1660,7 +1462,7 @@ class MiscPendingFeesView extends StatelessWidget {
                                 );
                               }).toList(),
                               onChanged: (value) {
-                                selectedFeesType = value ?? 'Misc';
+                                selectedFeesType = value ?? 'Admission';
                               },
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
@@ -1763,46 +1565,44 @@ class MiscPendingFeesView extends StatelessWidget {
                                       amountController.text,
                                     );
 
-                                    // Create challan
-                                    final challan = ChallanModel(
-                                      studentId:
-                                          fee.studentId?.toString() ?? '',
+                                    // Generate new challan
+                                    final newChallan = ChallanModel(
+                                      studentId: paidChallan.studentId,
                                       feesType: selectedFeesType,
                                       amount: amount,
-                                      referenceFeeId: fee.id?.toString(),
-                                      remarks: remarksController.text.isNotEmpty
-                                          ? remarksController.text
-                                          : null,
-                                      month: selectedFeesType == 'Monthly'
-                                          ? 'Monthly Fee'
-                                          : null,
-                                      examDetails: selectedFeesType == 'Exam'
-                                          ? 'Exam Fee'
-                                          : null,
-                                      feeDetails: selectedFeesType == 'Misc'
-                                          ? fee.miscFeeType
+                                      remarks:
+                                          remarksController.text
+                                              .trim()
+                                              .isNotEmpty
+                                          ? remarksController.text.trim()
                                           : null,
                                     );
 
                                     final success =
                                         await ChallanService.createChallan(
-                                          challan,
+                                          newChallan,
                                         );
 
-                                    Get.back(); // Close generate dialog
-
                                     if (success) {
+                                      Get.back(); // Close generate dialog
+
+                                      // Show success message
                                       Get.snackbar(
                                         'Success',
-                                        'Challan generated successfully!',
+                                        'New challan generated successfully',
                                         snackPosition: SnackPosition.BOTTOM,
                                         backgroundColor: Colors.green,
                                         colorText: Colors.white,
                                       );
+
+                                      // Reload challans to show the new one
+                                      final controller =
+                                          Get.find<ChallanController>();
+                                      await controller.loadChallanData();
                                     } else {
                                       Get.snackbar(
                                         'Error',
-                                        'Failed to generate challan. Please try again.',
+                                        'Failed to generate challan',
                                         snackPosition: SnackPosition.BOTTOM,
                                         backgroundColor: Colors.red,
                                         colorText: Colors.white,

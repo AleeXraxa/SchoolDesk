@@ -5,6 +5,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_colors.dart';
 import '../controller/monthly_fees_controller.dart';
 import '../../../data/models/monthly_fee_model.dart';
+import '../../../data/models/challan_model.dart';
+import '../service/challan_service.dart';
 import 'monthly_fee_details_dialog.dart';
 
 class MonthlyPendingFeesView extends StatelessWidget {
@@ -1157,7 +1159,7 @@ class MonthlyPendingFeesView extends StatelessWidget {
                     ),
                     SizedBox(height: 24.h),
 
-                    // OK Button with Animation
+                    // Buttons with Animation
                     TweenAnimationBuilder<double>(
                       tween: Tween(begin: 0.8, end: 1.0),
                       duration: const Duration(milliseconds: 900),
@@ -1165,35 +1167,120 @@ class MonthlyPendingFeesView extends StatelessWidget {
                       builder: (context, scale, child) {
                         return Transform.scale(
                           scale: scale,
-                          child: SizedBox(
-                            width: double.infinity,
-                            height: 50.h,
-                            child: ElevatedButton(
-                              onPressed: () => Get.back(),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.green[600],
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12.r),
-                                ),
-                                elevation: 4,
-                                shadowColor: Colors.green.withOpacity(0.4),
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.check, size: 18.sp),
-                                  SizedBox(width: 8.w),
-                                  Text(
-                                    'Continue',
+                          child: Row(
+                            children: [
+                              // Generate Challan Button
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed: () async {
+                                    Get.back(); // Close success dialog
+
+                                    // Automatically create challan without dialog
+                                    final month = fee.month ?? 'Monthly Fee';
+
+                                    print('🧾 Generating Challan...');
+                                    print('Type: Monthly');
+                                    print(
+                                      'Student ID: ${fee.studentId.toString()}',
+                                    );
+                                    print('Amount: ${fee.remainingAmount}');
+                                    print('Month: $month');
+                                    print(
+                                      'Reference Fee ID: ${fee.id?.toString()}',
+                                    );
+                                    print(
+                                      'Date: ${DateTime.now().toIso8601String()}',
+                                    );
+                                    print(
+                                      'Payment Mode: ${paymentAmount > 0 ? paymentMode : null}',
+                                    );
+                                    print('----------------------------');
+
+                                    final challan = ChallanModel(
+                                      studentId: fee.studentId.toString(),
+                                      feesType: 'Monthly',
+                                      amount: fee.remainingAmount,
+                                      referenceFeeId: fee.id?.toString(),
+                                      month: month,
+                                      feeDetails: 'Monthly Fee Payment',
+                                      datePaid: paymentAmount > 0
+                                          ? DateTime.now()
+                                          : null,
+                                      paymentMode: paymentAmount > 0
+                                          ? paymentMode
+                                          : null,
+                                    );
+
+                                    final success =
+                                        await ChallanService.createChallan(
+                                          challan,
+                                        );
+
+                                    if (success) {
+                                      // Show challan success dialog
+                                      _showChallanSuccessDialog(context);
+                                    } else {
+                                      Get.snackbar(
+                                        'Error',
+                                        'Failed to generate challan. Please try again.',
+                                        snackPosition: SnackPosition.BOTTOM,
+                                        backgroundColor: Colors.red,
+                                        colorText: Colors.white,
+                                      );
+                                    }
+                                  },
+                                  icon: Icon(
+                                    Icons.add_circle_outline,
+                                    size: 18.sp,
+                                  ),
+                                  label: Text(
+                                    'Generate Challan',
                                     style: GoogleFonts.inter(
-                                      fontSize: 16.sp,
+                                      fontSize: 14.sp,
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
-                                ],
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColors.primary,
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12.r),
+                                    ),
+                                    elevation: 4,
+                                    shadowColor: AppColors.primary.withOpacity(
+                                      0.4,
+                                    ),
+                                    padding: EdgeInsets.symmetric(
+                                      vertical: 14.h,
+                                    ),
+                                  ),
+                                ),
                               ),
-                            ),
+                              SizedBox(width: 12.w),
+                              // Continue Button
+                              Expanded(
+                                child: OutlinedButton(
+                                  onPressed: () => Get.back(),
+                                  style: OutlinedButton.styleFrom(
+                                    side: BorderSide(color: Colors.grey[300]!),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12.r),
+                                    ),
+                                    padding: EdgeInsets.symmetric(
+                                      vertical: 14.h,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    'Continue',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 14.sp,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.grey[700],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         );
                       },
@@ -1262,5 +1349,544 @@ class MonthlyPendingFeesView extends StatelessWidget {
       default:
         return Icons.payment;
     }
+  }
+
+  void _showGenerateChallanDialog(BuildContext context, MonthlyFeeModel fee) {
+    final amountController = TextEditingController();
+    final remarksController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    String selectedFeesType = 'Monthly'; // Default to Monthly type
+
+    final feesTypes = ['Admission', 'Monthly', 'Exam', 'Misc'];
+
+    Get.dialog(
+      Dialog(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        child: TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0.8, end: 1.0),
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.elasticOut,
+          builder: (context, scale, child) {
+            return Transform.scale(
+              scale: scale,
+              child: Container(
+                width: MediaQuery.of(context).size.width > 600 ? 500.w : 450.w,
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.8,
+                ),
+                padding: EdgeInsets.all(24.w),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20.r),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 20,
+                      spreadRadius: 5,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
+                child: SingleChildScrollView(
+                  child: Form(
+                    key: formKey,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Header
+                        Row(
+                          children: [
+                            Container(
+                              width: 40.w,
+                              height: 40.w,
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(10.r),
+                              ),
+                              child: Icon(
+                                Icons.add_circle_outline,
+                                color: AppColors.primary,
+                                size: 20.sp,
+                              ),
+                            ),
+                            SizedBox(width: 16.w),
+                            Expanded(
+                              child: Text(
+                                'Generate New Challan',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 20.sp,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 24.h),
+
+                        // Student Info Section
+                        Container(
+                          padding: EdgeInsets.all(16.w),
+                          decoration: BoxDecoration(
+                            color: Colors.blue[50],
+                            borderRadius: BorderRadius.circular(12.r),
+                            border: Border.all(color: Colors.blue[100]!),
+                          ),
+                          child: Column(
+                            children: [
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Student ID',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 14.sp,
+                                      color: Colors.grey[700],
+                                    ),
+                                  ),
+                                  Text(
+                                    fee.studentId.toString() ?? 'N/A',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 14.sp,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              SizedBox(height: 8.h),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Student Name',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 14.sp,
+                                      color: Colors.grey[700],
+                                    ),
+                                  ),
+                                  Text(
+                                    fee.studentName ?? 'Unknown',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 14.sp,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              SizedBox(height: 8.h),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Month',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 14.sp,
+                                      color: Colors.grey[700],
+                                    ),
+                                  ),
+                                  Text(
+                                    fee.month ?? 'No month',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 14.sp,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        SizedBox(height: 24.h),
+
+                        // Challan Generation Form
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Challan Details',
+                              style: GoogleFonts.poppins(
+                                fontSize: 16.sp,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black87,
+                              ),
+                            ),
+                            SizedBox(height: 16.h),
+
+                            // Fees Type
+                            DropdownButtonFormField<String>(
+                              value: selectedFeesType,
+                              decoration: InputDecoration(
+                                labelText: 'Fees Type',
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8.r),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8.r),
+                                  borderSide: BorderSide(
+                                    color: AppColors.primary,
+                                    width: 2,
+                                  ),
+                                ),
+                              ),
+                              items: feesTypes.map((type) {
+                                return DropdownMenuItem(
+                                  value: type,
+                                  child: Text(
+                                    type,
+                                    style: GoogleFonts.poppins(fontSize: 14.sp),
+                                  ),
+                                );
+                              }).toList(),
+                              onChanged: (value) {
+                                selectedFeesType = value ?? 'Monthly';
+                              },
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Please select a fees type';
+                                }
+                                return null;
+                              },
+                            ),
+                            SizedBox(height: 16.h),
+
+                            // Amount
+                            TextFormField(
+                              controller: amountController,
+                              keyboardType: TextInputType.number,
+                              decoration: InputDecoration(
+                                labelText: 'Challan Amount (PKR)',
+                                hintText: 'Enter challan amount',
+                                prefixIcon: Icon(
+                                  Icons.attach_money,
+                                  color: AppColors.primary,
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8.r),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8.r),
+                                  borderSide: BorderSide(
+                                    color: AppColors.primary,
+                                    width: 2,
+                                  ),
+                                ),
+                              ),
+                              validator: (value) {
+                                if (value == null || value.trim().isEmpty) {
+                                  return 'Challan amount is required';
+                                }
+                                final amount = double.tryParse(value);
+                                if (amount == null || amount <= 0) {
+                                  return 'Please enter a valid positive amount';
+                                }
+                                return null;
+                              },
+                            ),
+                            SizedBox(height: 16.h),
+
+                            // Remarks
+                            TextFormField(
+                              controller: remarksController,
+                              maxLines: 3,
+                              decoration: InputDecoration(
+                                labelText: 'Remarks (Optional)',
+                                hintText: 'Add any additional notes or remarks',
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8.r),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8.r),
+                                  borderSide: BorderSide(
+                                    color: AppColors.primary,
+                                    width: 2,
+                                  ),
+                                ),
+                              ),
+                              style: GoogleFonts.poppins(fontSize: 14.sp),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 32.h),
+
+                        // Buttons
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: () => Get.back(),
+                                style: OutlinedButton.styleFrom(
+                                  padding: EdgeInsets.symmetric(vertical: 14.h),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8.r),
+                                  ),
+                                  side: BorderSide(color: Colors.grey[300]!),
+                                ),
+                                child: Text(
+                                  'Cancel',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 14.sp,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.grey[700],
+                                  ),
+                                ),
+                              ),
+                            ),
+                            SizedBox(width: 16.w),
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: () async {
+                                  if (formKey.currentState?.validate() ??
+                                      false) {
+                                    final amount = double.parse(
+                                      amountController.text,
+                                    );
+
+                                    // Create challan
+                                    final challan = ChallanModel(
+                                      studentId: fee.studentId.toString(),
+                                      feesType: selectedFeesType,
+                                      amount: amount,
+                                      referenceFeeId: fee.id?.toString(),
+                                      remarks: remarksController.text.isNotEmpty
+                                          ? remarksController.text
+                                          : null,
+                                      month: selectedFeesType == 'Monthly'
+                                          ? fee.month
+                                          : null,
+                                      examDetails: selectedFeesType == 'Exam'
+                                          ? 'Exam Fee'
+                                          : null,
+                                      feeDetails: selectedFeesType == 'Misc'
+                                          ? 'Miscellaneous Fee'
+                                          : null,
+                                    );
+
+                                    final success =
+                                        await ChallanService.createChallan(
+                                          challan,
+                                        );
+
+                                    Get.back(); // Close generate dialog
+
+                                    if (success) {
+                                      Get.snackbar(
+                                        'Success',
+                                        'Challan generated successfully!',
+                                        snackPosition: SnackPosition.BOTTOM,
+                                        backgroundColor: Colors.green,
+                                        colorText: Colors.white,
+                                      );
+                                    } else {
+                                      Get.snackbar(
+                                        'Error',
+                                        'Failed to generate challan. Please try again.',
+                                        snackPosition: SnackPosition.BOTTOM,
+                                        backgroundColor: Colors.red,
+                                        colorText: Colors.white,
+                                      );
+                                    }
+                                  }
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primary,
+                                  padding: EdgeInsets.symmetric(vertical: 14.h),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8.r),
+                                  ),
+                                  elevation: 2,
+                                ),
+                                child: Text(
+                                  'Generate Challan',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 14.sp,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+      barrierDismissible: true,
+    );
+  }
+
+  void _showChallanSuccessDialog(BuildContext context) {
+    Get.dialog(
+      Dialog(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        child: TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0.8, end: 1.0),
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.elasticOut,
+          builder: (context, scale, child) {
+            return Transform.scale(
+              scale: scale,
+              child: Container(
+                width: MediaQuery.of(context).size.width > 600 ? 350.w : 300.w,
+                padding: EdgeInsets.all(24.w),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20.r),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 20,
+                      spreadRadius: 5,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Success Icon with Animation
+                    TweenAnimationBuilder<double>(
+                      tween: Tween(begin: 0.0, end: 1.0),
+                      duration: const Duration(milliseconds: 500),
+                      curve: Curves.elasticOut,
+                      builder: (context, value, child) {
+                        return Transform.scale(
+                          scale: value,
+                          child: Container(
+                            width: 70.w,
+                            height: 70.w,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  Colors.green[400]!,
+                                  Colors.green[600]!,
+                                ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.green.withOpacity(0.3),
+                                  blurRadius: 15,
+                                  spreadRadius: 2,
+                                ),
+                              ],
+                            ),
+                            child: Icon(
+                              Icons.check_circle,
+                              color: Colors.white,
+                              size: 35.sp,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    SizedBox(height: 20.h),
+
+                    // Title with Animation
+                    TweenAnimationBuilder<double>(
+                      tween: Tween(begin: 0.0, end: 1.0),
+                      duration: const Duration(milliseconds: 500),
+                      curve: Curves.easeOut,
+                      builder: (context, opacity, child) {
+                        return Opacity(
+                          opacity: opacity,
+                          child: Transform.translate(
+                            offset: Offset(0, (1 - opacity) * 20),
+                            child: Text(
+                              'Challan Generated!',
+                              style: GoogleFonts.inter(
+                                fontSize: 22.sp,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    SizedBox(height: 12.h),
+
+                    // Success Message with Animation
+                    TweenAnimationBuilder<double>(
+                      tween: Tween(begin: 0.0, end: 1.0),
+                      duration: const Duration(milliseconds: 700),
+                      curve: Curves.easeOut,
+                      builder: (context, opacity, child) {
+                        return Opacity(
+                          opacity: opacity,
+                          child: Text(
+                            '✅ Challan generated successfully!',
+                            style: GoogleFonts.inter(
+                              fontSize: 14.sp,
+                              color: Colors.grey[600],
+                              height: 1.4,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        );
+                      },
+                    ),
+                    SizedBox(height: 24.h),
+
+                    // OK Button with Animation
+                    TweenAnimationBuilder<double>(
+                      tween: Tween(begin: 0.8, end: 1.0),
+                      duration: const Duration(milliseconds: 800),
+                      curve: Curves.elasticOut,
+                      builder: (context, scale, child) {
+                        return Transform.scale(
+                          scale: scale,
+                          child: SizedBox(
+                            width: double.infinity,
+                            height: 45.h,
+                            child: ElevatedButton(
+                              onPressed: () => Get.back(),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green[600],
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12.r),
+                                ),
+                                elevation: 4,
+                                shadowColor: Colors.green.withOpacity(0.4),
+                              ),
+                              child: Text(
+                                'OK',
+                                style: GoogleFonts.inter(
+                                  fontSize: 16.sp,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+      barrierDismissible: true,
+    );
   }
 }
