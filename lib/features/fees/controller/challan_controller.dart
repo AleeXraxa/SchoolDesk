@@ -10,6 +10,7 @@ enum ChallanSection {
   monthlyChallans,
   examChallans,
   miscChallans,
+  multipleChallans,
 }
 
 class ChallanRecord {
@@ -120,6 +121,8 @@ class ChallanController extends GetxController {
               return challan.feesType == 'Exam';
             case ChallanSection.miscChallans:
               return challan.feesType == 'Misc';
+            case ChallanSection.multipleChallans:
+              return challan.feesType == 'Multiple';
           }
         })
         .where((challan) {

@@ -365,6 +365,17 @@ class MonthlyPaidFeesView extends StatelessWidget {
                   padding: EdgeInsets.all(6.w),
                 ),
               ),
+              SizedBox(width: 4.w),
+              IconButton(
+                onPressed: () {},
+                icon: Icon(Icons.receipt_long, size: 18.sp),
+                tooltip: 'Generate Challan',
+                color: Colors.orange[600],
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.orange[50],
+                  padding: EdgeInsets.all(6.w),
+                ),
+              ),
             ],
           ),
         ),

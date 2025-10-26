@@ -297,6 +297,8 @@ class ChallanListView extends StatelessWidget {
         return 'Exam';
       case ChallanSection.miscChallans:
         return 'Misc';
+      case ChallanSection.multipleChallans:
+        return 'Multiple';
     }
   }
 

@@ -164,6 +164,10 @@ class ChallanView extends GetView<ChallanController> {
         return const ExamChallanView(key: ValueKey('exam'));
       case ChallanSection.miscChallans:
         return const MiscChallanView(key: ValueKey('misc'));
+      case ChallanSection.multipleChallans:
+        return const MiscChallanView(
+          key: ValueKey('multiple'),
+        ); // Reuse MiscChallanView for now
     }
   }
 
@@ -177,6 +181,8 @@ class ChallanView extends GetView<ChallanController> {
         return 'Exam Challans';
       case ChallanSection.miscChallans:
         return 'Misc Challans';
+      case ChallanSection.multipleChallans:
+        return 'Multiple Challans';
     }
   }
 }
@@ -336,6 +342,10 @@ class ChallanMainView extends GetView<ChallanController> {
         return const ExamChallanView(key: ValueKey('exam'));
       case ChallanSection.miscChallans:
         return const MiscChallanView(key: ValueKey('misc'));
+      case ChallanSection.multipleChallans:
+        return const MiscChallanView(
+          key: ValueKey('multiple'),
+        ); // Reuse MiscChallanView for now
     }
   }
 
@@ -349,6 +359,8 @@ class ChallanMainView extends GetView<ChallanController> {
         return 'Exam Challans';
       case ChallanSection.miscChallans:
         return 'Misc Challans';
+      case ChallanSection.multipleChallans:
+        return 'Multiple Challans';
     }
   }
 }

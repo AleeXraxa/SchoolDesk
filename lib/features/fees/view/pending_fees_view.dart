@@ -1847,50 +1847,29 @@ class PendingFeesView extends StatelessWidget {
                                     Get.back(); // Close success dialog
 
                                     // Automatically create challan without dialog
-                                    final month = DateFormat(
-                                      'MMMM - yyyy',
-                                    ).format(DateTime.now());
-
-                                    print('🧾 Generating Challan...');
-                                    print('Type: Admission');
-                                    print(
-                                      'Student ID: ${fee.studentId?.toString() ?? ''}',
-                                    );
-                                    print('Amount: ${fee.remainingAmount}');
-                                    print('Month: $month');
-                                    print(
-                                      'Reference Fee ID: ${fee.id?.toString()}',
-                                    );
-                                    print(
-                                      'Date: ${DateTime.now().toIso8601String()}',
-                                    );
-                                    print(
-                                      'Payment Mode: ${paymentAmount > 0 ? paymentMode : null}',
-                                    );
-                                    print('----------------------------');
-
-                                    final challan = ChallanModel(
-                                      studentId:
-                                          fee.studentId?.toString() ?? '',
-                                      feesType: 'Admission',
-                                      amount: fee.remainingAmount,
-                                      referenceFeeId: fee.id?.toString(),
-                                      month: month,
-                                      feeDetails: 'Admission Fee Payment',
-                                      datePaid: paymentAmount > 0
-                                          ? DateTime.now()
-                                          : null,
-                                      paymentMode: paymentAmount > 0
-                                          ? paymentMode
-                                          : null,
-                                    );
-
-                                    final success =
-                                        await ChallanService.createChallan(
-                                          challan,
+                                    final challanSuccess =
+                                        await ChallanService.generateSingleChallan(
+                                          studentId:
+                                              fee.studentId?.toString() ?? '',
+                                          classId:
+                                              null, // Admission fees don't have class
+                                          feesType: 'Admission',
+                                          amount: paymentAmount,
+                                          referenceFeeId:
+                                              fee.id?.toString() ?? '',
+                                          month: DateFormat(
+                                            'MMMM - yyyy',
+                                          ).format(DateTime.now()),
+                                          feeDetails: 'Admission Fee Payment',
+                                          datePaid: paymentAmount > 0
+                                              ? DateTime.now()
+                                              : null,
+                                          paymentMode: paymentAmount > 0
+                                              ? paymentMode
+                                              : null,
                                         );
 
-                                    if (success) {
+                                    if (challanSuccess) {
                                       // Show challan success dialog
                                       _showChallanSuccessDialog(context);
                                     } else {
