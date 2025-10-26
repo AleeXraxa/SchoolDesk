@@ -45,6 +45,7 @@ class ChallanController extends GetxController {
   void onInit() {
     super.onInit();
     loadStudents();
+    loadChallanData();
   }
 
   Future<void> loadStudents() async {
@@ -86,6 +87,8 @@ class ChallanController extends GetxController {
 
   void changeSection(ChallanSection section) {
     selectedSection.value = section;
+    // Reload challans when switching sections to ensure fresh data
+    loadChallanData();
   }
 
   void updateSearchQuery(String query) {
@@ -135,6 +138,9 @@ class ChallanController extends GetxController {
     required double amount,
     required String referenceFeeId,
     String? classId,
+    String? month,
+    String? examDetails,
+    String? feeDetails,
   }) async {
     try {
       final challan = ChallanModel(
@@ -144,6 +150,9 @@ class ChallanController extends GetxController {
         amount: amount,
         referenceFeeId: referenceFeeId,
         status: 'Generated',
+        month: month,
+        examDetails: examDetails,
+        feeDetails: feeDetails,
       );
 
       final success = await ChallanService.createChallan(challan);
@@ -169,5 +178,10 @@ class ChallanController extends GetxController {
         colorText: Colors.white,
       );
     }
+  }
+
+  // Method to refresh challans data
+  Future<void> refreshChallans() async {
+    await loadChallanData();
   }
 }

@@ -64,14 +64,26 @@ class ChallanService {
   static Future<List<ChallanModel>> fetchChallansByType(String feesType) async {
     try {
       final db = await DatabaseService.database;
-      final List<Map<String, dynamic>> maps = await db.query(
-        'challans',
-        where: 'fees_type = ?',
-        whereArgs: [feesType],
-        orderBy: 'date_generated DESC',
+      final List<Map<String, dynamic>> maps = await db.rawQuery(
+        '''
+        SELECT challans.*, students.student_name AS student_name, students.roll_no AS roll_no
+        FROM challans
+        LEFT JOIN students ON challans.student_id = students.id
+        WHERE challans.fees_type = ?
+        ORDER BY challans.date_generated DESC
+      ''',
+        [feesType],
       );
 
-      return maps.map((map) => ChallanModel.fromMap(map)).toList();
+      final challans = maps.map((map) => ChallanModel.fromMap(map)).toList();
+      print('Fetched $feesType challans: ${challans.length} items');
+      for (var challan in challans) {
+        print(
+          'Challan: ${challan.challanId} - Student: ${challan.studentName ?? 'Unknown'}',
+        );
+      }
+
+      return challans;
     } catch (e) {
       print('Error fetching challans by type: $e');
       return [];
@@ -82,12 +94,22 @@ class ChallanService {
   static Future<List<ChallanModel>> fetchAllChallans() async {
     try {
       final db = await DatabaseService.database;
-      final List<Map<String, dynamic>> maps = await db.query(
-        'challans',
-        orderBy: 'date_generated DESC',
-      );
+      final List<Map<String, dynamic>> maps = await db.rawQuery('''
+        SELECT challans.*, students.student_name AS student_name, students.roll_no AS roll_no
+        FROM challans
+        LEFT JOIN students ON challans.student_id = students.id
+        ORDER BY challans.date_generated DESC
+      ''');
 
-      return maps.map((map) => ChallanModel.fromMap(map)).toList();
+      final challans = maps.map((map) => ChallanModel.fromMap(map)).toList();
+      print('Fetched all challans: ${challans.length} items');
+      for (var challan in challans) {
+        print(
+          'Challan: ${challan.challanId} - Student: ${challan.studentName ?? 'Unknown'}',
+        );
+      }
+
+      return challans;
     } catch (e) {
       print('Error fetching all challans: $e');
       return [];
@@ -170,24 +192,34 @@ class ChallanService {
     try {
       final db = await DatabaseService.database;
 
-      String whereClause = 'student_name LIKE ? OR roll_no LIKE ?';
+      String whereClause =
+          'students.student_name LIKE ? OR students.roll_no LIKE ?';
       List<dynamic> whereArgs = ['%$query%', '%$query%'];
 
       if (feesType != null) {
-        whereClause += ' AND fees_type = ?';
+        whereClause += ' AND challans.fees_type = ?';
         whereArgs.add(feesType);
       }
 
-      // Note: This assumes we have student data joined or available
-      // In a real implementation, you might need to join with students table
-      final List<Map<String, dynamic>> maps = await db.query(
-        'challans',
-        where: whereClause,
-        whereArgs: whereArgs,
-        orderBy: 'date_generated DESC',
-      );
+      final List<Map<String, dynamic>> maps = await db.rawQuery('''
+        SELECT challans.*, students.student_name AS student_name, students.roll_no AS roll_no
+        FROM challans
+        LEFT JOIN students ON challans.student_id = students.id
+        WHERE $whereClause
+        ORDER BY challans.date_generated DESC
+      ''', whereArgs);
 
-      return maps.map((map) => ChallanModel.fromMap(map)).toList();
+      final challans = maps.map((map) => ChallanModel.fromMap(map)).toList();
+      print(
+        'Searched challans: ${challans.length} items found for query: $query',
+      );
+      for (var challan in challans) {
+        print(
+          'Challan: ${challan.challanId} - Student: ${challan.studentName ?? 'Unknown'}',
+        );
+      }
+
+      return challans;
     } catch (e) {
       print('Error searching challans: $e');
       return [];

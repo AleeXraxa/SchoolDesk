@@ -1,6 +1,8 @@
 class ChallanModel {
   final String challanId;
   final String studentId;
+  final String? studentName; // Added student name field
+  final String? rollNo; // Added roll number field
   final String? classId;
   final String feesType; // 'Admission', 'Monthly', 'Exam', 'Misc'
   final double amount;
@@ -18,6 +20,8 @@ class ChallanModel {
   ChallanModel({
     String? challanId,
     required this.studentId,
+    this.studentName,
+    this.rollNo,
     this.classId,
     required this.feesType,
     required this.amount,
@@ -56,13 +60,15 @@ class ChallanModel {
   factory ChallanModel.fromMap(Map<String, dynamic> map) {
     return ChallanModel(
       challanId: map['challan_id'],
-      studentId: map['student_id'],
-      classId: map['class_id'],
+      studentId: map['student_id']?.toString() ?? '',
+      studentName: map['student_name'], // Added student name from JOIN
+      rollNo: map['roll_no'], // Added roll number from JOIN
+      classId: map['class_id']?.toString(),
       feesType: map['fees_type'],
       amount: map['amount']?.toDouble() ?? 0.0,
       status: map['status'] ?? 'Generated',
       dateGenerated: DateTime.parse(map['date_generated']),
-      referenceFeeId: map['reference_fee_id'],
+      referenceFeeId: map['reference_fee_id']?.toString(),
       datePaid: map['date_paid'] != null
           ? DateTime.parse(map['date_paid'])
           : null,
@@ -78,6 +84,8 @@ class ChallanModel {
   ChallanModel copyWith({
     String? challanId,
     String? studentId,
+    String? studentName,
+    String? rollNo,
     String? classId,
     String? feesType,
     double? amount,
@@ -94,6 +102,8 @@ class ChallanModel {
     return ChallanModel(
       challanId: challanId ?? this.challanId,
       studentId: studentId ?? this.studentId,
+      studentName: studentName ?? this.studentName,
+      rollNo: rollNo ?? this.rollNo,
       classId: classId ?? this.classId,
       feesType: feesType ?? this.feesType,
       amount: amount ?? this.amount,
