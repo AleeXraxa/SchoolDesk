@@ -53,15 +53,15 @@ class _MonthlyFeeDetailsDialogState extends State<MonthlyFeeDetailsDialog>
   String get _progressMessage {
     final percentage = (_progressPercentage * 100).round();
     if (percentage == 100) {
-      return '🎉 Congratulations! All monthly fees have been paid!';
+      return '🎉 Congratulations! All admission fees have been paid!';
     } else if (percentage >= 75) {
-      return '🚀 Excellent progress! You\'re almost done with monthly fees.';
+      return '🚀 Excellent progress! You\'re almost done with admission fees.';
     } else if (percentage >= 50) {
-      return '💪 Great job! You\'re halfway through your monthly fees.';
+      return '💪 Great job! You\'re halfway through your admission fees.';
     } else if (percentage >= 25) {
-      return '📈 Good start! Keep up the momentum with monthly fees.';
+      return '📈 Good start! Keep up the momentum with admission fees.';
     } else {
-      return '🎯 Let\'s get started! Begin paying your monthly fees today.';
+      return '🎯 Let\'s get started! Begin paying your admission fees today.';
     }
   }
 
@@ -166,7 +166,7 @@ class _MonthlyFeeDetailsDialogState extends State<MonthlyFeeDetailsDialog>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Monthly Fee Details',
+                  'Admission Fee Details',
                   style: GoogleFonts.poppins(
                     fontSize: 18.sp,
                     fontWeight: FontWeight.w600,
@@ -303,11 +303,7 @@ class _MonthlyFeeDetailsDialogState extends State<MonthlyFeeDetailsDialog>
             SizedBox(height: 16.h),
             _buildInfoRow('Student Name:', widget.fee.studentName ?? 'Unknown'),
             _buildInfoRow('Roll No:', widget.fee.rollNo ?? 'N/A'),
-            _buildInfoRow(
-              'Class:',
-              '${widget.fee.className ?? 'N/A'} ${widget.fee.section ?? ''}'
-                  .trim(),
-            ),
+            _buildInfoRow('Class:', 'Not Available'),
           ],
         ),
       ),

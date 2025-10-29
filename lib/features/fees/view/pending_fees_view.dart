@@ -1847,6 +1847,20 @@ class PendingFeesView extends StatelessWidget {
                                     Get.back(); // Close success dialog
 
                                     // Automatically create challan without dialog
+                                    print(
+                                      'DEBUG: Payment success dialog - generating challan',
+                                    );
+                                    print(
+                                      'DEBUG: Student ID: ${fee.studentId}',
+                                    );
+                                    print(
+                                      'DEBUG: Payment Amount: $paymentAmount',
+                                    );
+                                    print('DEBUG: Fee ID: ${fee.id}');
+                                    print(
+                                      'DEBUG: Remaining Amount: ${fee.remainingAmount}',
+                                    );
+
                                     final challanSuccess =
                                         await ChallanService.generateSingleChallan(
                                           studentId:
@@ -1854,7 +1868,8 @@ class PendingFeesView extends StatelessWidget {
                                           classId:
                                               null, // Admission fees don't have class
                                           feesType: 'Admission',
-                                          amount: paymentAmount,
+                                          amount:
+                                              paymentAmount, // Use the actual payment amount
                                           referenceFeeId:
                                               fee.id?.toString() ?? '',
                                           month: DateFormat(

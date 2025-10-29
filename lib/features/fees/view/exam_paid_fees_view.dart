@@ -7,6 +7,8 @@ import '../../../core/theme/app_colors.dart';
 import '../controller/exam_fees_controller.dart';
 import '../../../data/models/exam_paid_fee_model.dart';
 import 'exam_fee_details_dialog.dart';
+import '../service/challan_service.dart';
+import 'package:intl/intl.dart';
 
 class ExamPaidFeesView extends StatelessWidget {
   const ExamPaidFeesView({super.key});
@@ -454,15 +456,77 @@ class ExamPaidFeesView extends StatelessWidget {
                 ),
               ),
               SizedBox(width: 4.w),
-              IconButton(
-                onPressed: () {},
-                icon: Icon(Icons.receipt_long, size: 18.sp),
-                tooltip: 'Generate Challan',
-                color: Colors.orange[600],
-                style: IconButton.styleFrom(
-                  backgroundColor: Colors.orange[50],
-                  padding: EdgeInsets.all(6.w),
+              FutureBuilder<int>(
+                future: ChallanService.getUnpaidFeeEntriesCount(
+                  fee.studentId.toString(),
+                  feesType: 'Exam',
                 ),
+                builder: (context, snapshot) {
+                  final unpaidCount = snapshot.data ?? 0;
+                  final hasChallan =
+                      unpaidCount ==
+                      0; // If count is 0, all are paid (challan exists)
+
+                  return IconButton(
+                    onPressed: hasChallan
+                        ? null
+                        : () async {
+                            if (unpaidCount == 1) {
+                              // Single entry - generate directly
+                              final success =
+                                  await ChallanService.generateSingleChallan(
+                                    studentId: fee.studentId.toString(),
+                                    classId: fee
+                                        .className, // Use class name for exam fees
+                                    feesType: 'Exam',
+                                    amount: fee
+                                        .paidAmount, // ✅ CORRECT: Using actual paid amount
+                                    referenceFeeId: fee.id.toString(),
+                                    month: DateFormat(
+                                      'MMMM yyyy',
+                                    ).format(DateTime.now()),
+                                    datePaid: fee.paymentDate,
+                                    paymentMode: fee.paymentMode,
+                                  );
+
+                              if (success) {
+                                Get.snackbar(
+                                  'Success',
+                                  'Challan generated successfully!',
+                                  snackPosition: SnackPosition.BOTTOM,
+                                  backgroundColor: Colors.green,
+                                  colorText: Colors.white,
+                                );
+                              } else {
+                                Get.snackbar(
+                                  'Error',
+                                  'Failed to generate challan. It may already exist.',
+                                  snackPosition: SnackPosition.BOTTOM,
+                                  backgroundColor: Colors.red,
+                                  colorText: Colors.white,
+                                );
+                              }
+                            } else {
+                              // Multiple entries - show selection dialog
+                              _showCombinedChallanDialog(context, fee);
+                            }
+                          },
+                    icon: Icon(
+                      hasChallan ? Icons.check_circle : Icons.receipt_long,
+                      size: 18.sp,
+                    ),
+                    tooltip: hasChallan
+                        ? 'Challan Already Generated'
+                        : 'Generate Challan',
+                    color: hasChallan ? Colors.green[600] : Colors.orange[600],
+                    style: IconButton.styleFrom(
+                      backgroundColor: hasChallan
+                          ? Colors.green[50]
+                          : Colors.orange[50],
+                      padding: EdgeInsets.all(6.w),
+                    ),
+                  );
+                },
               ),
             ],
           ),
@@ -473,5 +537,408 @@ class ExamPaidFeesView extends StatelessWidget {
 
   void _showExamFeeDetailsDialog(ExamPaidFeeModel fee) {
     Get.dialog(ExamFeeDetailsDialog(fee: fee), barrierDismissible: true);
+  }
+
+  void _showCombinedChallanDialog(BuildContext context, ExamPaidFeeModel fee) {
+    final selectedEntries = <Map<String, dynamic>>[].obs;
+    final remarksController = TextEditingController();
+
+    Get.dialog(
+      Dialog(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        child: TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0.8, end: 1.0),
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.elasticOut,
+          builder: (context, scale, child) {
+            return Transform.scale(
+              scale: scale,
+              child: Container(
+                width: MediaQuery.of(context).size.width > 600 ? 600.w : 500.w,
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.8,
+                ),
+                padding: EdgeInsets.all(24.w),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20.r),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 20,
+                      spreadRadius: 5,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Header
+                    Row(
+                      children: [
+                        Container(
+                          width: 40.w,
+                          height: 40.w,
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(10.r),
+                          ),
+                          child: Icon(
+                            Icons.playlist_add_check,
+                            color: AppColors.primary,
+                            size: 20.sp,
+                          ),
+                        ),
+                        SizedBox(width: 16.w),
+                        Expanded(
+                          child: Text(
+                            'Select Entries for Individual Challans',
+                            style: GoogleFonts.poppins(
+                              fontSize: 18.sp,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 20.h),
+
+                    // Student Info
+                    Container(
+                      padding: EdgeInsets.all(16.w),
+                      decoration: BoxDecoration(
+                        color: Colors.blue[50],
+                        borderRadius: BorderRadius.circular(12.r),
+                      ),
+                      child: Column(
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Student',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14.sp,
+                                  color: Colors.grey[700],
+                                ),
+                              ),
+                              Text(
+                                fee.studentName ?? 'Unknown',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14.sp,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 8.h),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Total Paid',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14.sp,
+                                  color: Colors.grey[700],
+                                ),
+                              ),
+                              Text(
+                                'Rs. ${fee.paidAmount.toStringAsFixed(0)}',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14.sp,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.green[700],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(height: 20.h),
+
+                    // Select All Checkbox
+                    Row(
+                      children: [
+                        Obx(
+                          () => Checkbox(
+                            value:
+                                selectedEntries.length == 1, // Single fee entry
+                            onChanged: (value) {
+                              if (value == true) {
+                                selectedEntries.value = [
+                                  {
+                                    'id': fee.id,
+                                    'amount': fee.paidAmount,
+                                    'payment_date': fee.paymentDate,
+                                    'mode_of_payment': fee.paymentMode,
+                                    'fees_type': 'Exam',
+                                  },
+                                ];
+                              } else {
+                                selectedEntries.clear();
+                              }
+                            },
+                          ),
+                        ),
+                        Text(
+                          'Select Entry',
+                          style: GoogleFonts.poppins(
+                            fontSize: 14.sp,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 12.h),
+
+                    // Individual Payments List
+                    Flexible(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.grey[50],
+                          borderRadius: BorderRadius.circular(8.r),
+                        ),
+                        child: ListView.separated(
+                          shrinkWrap: true,
+                          itemCount: 1, // Single entry for exam fees
+                          separatorBuilder: (context, index) =>
+                              Divider(color: Colors.grey[200], height: 1),
+                          itemBuilder: (context, index) {
+                            // Check if this payment already has a challan
+                            return FutureBuilder<bool>(
+                              future: ChallanService.challanExistsForFee(
+                                fee.id.toString(),
+                              ),
+                              builder: (context, snapshot) {
+                                final hasChallan = snapshot.data ?? false;
+
+                                return Obx(
+                                  () => Container(
+                                    padding: EdgeInsets.all(12.w),
+                                    child: Row(
+                                      children: [
+                                        Checkbox(
+                                          value: selectedEntries.any(
+                                            (entry) => entry['id'] == fee.id,
+                                          ),
+                                          onChanged: hasChallan
+                                              ? null // Disable if challan already exists
+                                              : (value) {
+                                                  if (value == true) {
+                                                    selectedEntries.add({
+                                                      'id': fee.id,
+                                                      'amount': fee.paidAmount,
+                                                      'payment_date':
+                                                          fee.paymentDate,
+                                                      'mode_of_payment':
+                                                          fee.paymentMode,
+                                                      'fees_type': 'Exam',
+                                                    });
+                                                  } else {
+                                                    selectedEntries.removeWhere(
+                                                      (entry) =>
+                                                          entry['id'] == fee.id,
+                                                    );
+                                                  }
+                                                },
+                                        ),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Row(
+                                                children: [
+                                                  Text(
+                                                    DateFormat(
+                                                      'dd/MM/yyyy HH:mm',
+                                                    ).format(fee.paymentDate),
+                                                    style: GoogleFonts.poppins(
+                                                      fontSize: 12.sp,
+                                                      color: hasChallan
+                                                          ? Colors.grey[500]
+                                                          : Colors.black87,
+                                                      decoration: hasChallan
+                                                          ? TextDecoration
+                                                                .lineThrough
+                                                          : null,
+                                                    ),
+                                                  ),
+                                                  if (hasChallan) ...[
+                                                    SizedBox(width: 8.w),
+                                                    Icon(
+                                                      Icons.check_circle,
+                                                      size: 14.sp,
+                                                      color: Colors.green[600],
+                                                    ),
+                                                  ],
+                                                ],
+                                              ),
+                                              Text(
+                                                'Rs. ${fee.paidAmount.toStringAsFixed(0)} - ${fee.paymentMode}',
+                                                style: GoogleFonts.poppins(
+                                                  fontSize: 11.sp,
+                                                  color: hasChallan
+                                                      ? Colors.grey[400]
+                                                      : Colors.grey[600],
+                                                  decoration: hasChallan
+                                                      ? TextDecoration
+                                                            .lineThrough
+                                                      : null,
+                                                ),
+                                              ),
+                                              if (hasChallan)
+                                                Text(
+                                                  'Challan already generated',
+                                                  style: GoogleFonts.poppins(
+                                                    fontSize: 10.sp,
+                                                    color: Colors.green[600],
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                                ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+
+                    SizedBox(height: 20.h),
+
+                    // Remarks Field
+                    TextFormField(
+                      controller: remarksController,
+                      maxLines: 2,
+                      decoration: InputDecoration(
+                        labelText: 'Remarks (Optional)',
+                        hintText: 'Add any additional notes',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8.r),
+                        ),
+                      ),
+                      style: GoogleFonts.poppins(fontSize: 14.sp),
+                    ),
+
+                    SizedBox(height: 24.h),
+
+                    // Buttons
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => Get.back(),
+                            style: OutlinedButton.styleFrom(
+                              padding: EdgeInsets.symmetric(vertical: 14.h),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8.r),
+                              ),
+                              side: BorderSide(color: Colors.grey[300]!),
+                            ),
+                            child: Text(
+                              'Cancel',
+                              style: GoogleFonts.poppins(
+                                fontSize: 14.sp,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.grey[700],
+                              ),
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: 16.w),
+                        Expanded(
+                          child: Obx(
+                            () => ElevatedButton(
+                              onPressed: selectedEntries.isEmpty
+                                  ? null
+                                  : () async {
+                                      final totalAmount = selectedEntries
+                                          .fold<double>(
+                                            0.0,
+                                            (sum, entry) =>
+                                                sum +
+                                                (entry['amount'] as double),
+                                          );
+
+                                      final referenceFeeIds = selectedEntries
+                                          .map(
+                                            (entry) => entry['id'].toString(),
+                                          )
+                                          .toList();
+
+                                      final success =
+                                          await ChallanService.generateSeparateChallans(
+                                            studentId: fee.studentId.toString(),
+                                            classId: fee.className,
+                                            selectedEntries: selectedEntries,
+                                            remarks:
+                                                remarksController
+                                                    .text
+                                                    .isNotEmpty
+                                                ? remarksController.text
+                                                : null,
+                                          );
+
+                                      Get.back(); // Close dialog
+
+                                      if (success) {
+                                        Get.snackbar(
+                                          'Success',
+                                          'Individual challans generated successfully!',
+                                          snackPosition: SnackPosition.BOTTOM,
+                                          backgroundColor: Colors.green,
+                                          colorText: Colors.white,
+                                        );
+                                      } else {
+                                        Get.snackbar(
+                                          'Error',
+                                          'Failed to generate individual challans.',
+                                          snackPosition: SnackPosition.BOTTOM,
+                                          backgroundColor: Colors.red,
+                                          colorText: Colors.white,
+                                        );
+                                      }
+                                    },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                padding: EdgeInsets.symmetric(vertical: 14.h),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8.r),
+                                ),
+                                elevation: 2,
+                              ),
+                              child: Text(
+                                'Generate Challan (${selectedEntries.length})',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14.sp,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+      barrierDismissible: true,
+    );
   }
 }

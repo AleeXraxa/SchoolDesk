@@ -1185,7 +1185,9 @@ class ExamPendingFeesView extends StatelessWidget {
                                     print(
                                       'Student ID: ${fee.studentId?.toString() ?? ''}',
                                     );
-                                    print('Amount: ${fee.totalFee ?? 0.0}');
+                                    print(
+                                      'Amount: ${paymentAmount}',
+                                    ); // Use the actual payment amount
                                     print('Month: $month');
                                     print(
                                       'Reference Fee ID: ${fee.id?.toString()}',
@@ -1203,7 +1205,8 @@ class ExamPendingFeesView extends StatelessWidget {
                                           fee.studentId?.toString() ?? '',
                                       classId: fee.classId?.toString(),
                                       feesType: 'Exam',
-                                      amount: fee.totalFee ?? 0.0,
+                                      amount:
+                                          paymentAmount, // Use the actual payment amount
                                       referenceFeeId: fee.id?.toString(),
                                       month: month,
                                       examDetails: fee.examName ?? 'Exam Fee',

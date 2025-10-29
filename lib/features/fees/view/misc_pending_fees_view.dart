@@ -1134,7 +1134,9 @@ class MiscPendingFeesView extends StatelessWidget {
                                     print(
                                       'Student ID: ${fee.studentId?.toString() ?? ''}',
                                     );
-                                    print('Amount: ${fee.remainingAmount}');
+                                    print(
+                                      'Amount: ${paymentAmount}',
+                                    ); // Use the actual payment amount
                                     print('Month: $month');
                                     print(
                                       'Reference Fee ID: ${fee.id?.toString()}',
@@ -1151,7 +1153,8 @@ class MiscPendingFeesView extends StatelessWidget {
                                       studentId:
                                           fee.studentId?.toString() ?? '',
                                       feesType: 'Misc',
-                                      amount: fee.remainingAmount,
+                                      amount:
+                                          paymentAmount, // Use the actual payment amount
                                       referenceFeeId: fee.id?.toString(),
                                       month: month,
                                       feeDetails: fee.miscFeeType,

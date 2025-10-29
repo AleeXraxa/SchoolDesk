@@ -449,7 +449,11 @@ class PaidFeesView extends StatelessWidget {
                         ? null
                         : () async {
                             if (unpaidCount == 1) {
-                              // Single entry - generate directly
+                              // Single entry - generate challan for the paid amount
+                              print(
+                                'DEBUG: Generating challan for paid amount: ${aggregatedPayment.totalPaidAmount}',
+                              );
+
                               final success =
                                   await ChallanService.generateSingleChallan(
                                     studentId: aggregatedPayment.studentId
@@ -457,7 +461,8 @@ class PaidFeesView extends StatelessWidget {
                                     classId:
                                         null, // Aggregated payment doesn't have classId
                                     feesType: 'Admission',
-                                    amount: aggregatedPayment.totalPaidAmount,
+                                    amount: aggregatedPayment
+                                        .totalPaidAmount, // Use paid amount for the challan
                                     referenceFeeId: aggregatedPayment.studentId
                                         .toString(),
                                     month: DateFormat(

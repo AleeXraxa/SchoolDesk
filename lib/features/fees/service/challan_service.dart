@@ -319,7 +319,7 @@ class ChallanService {
       print('Student ID: $studentId');
       print('Class ID: $classId');
       print('Fees Type: $feesType');
-      print('Amount: $amount');
+      print('Amount: $amount'); // ✅ DEBUG: Verify this shows actual paid amount
       print('Reference Fee ID: $referenceFeeId');
       print('Month: $month');
       print('Exam Details: $examDetails');
@@ -328,6 +328,17 @@ class ChallanService {
       print('Payment Mode: $paymentMode');
       print('Remarks: $remarks');
       print('==================================');
+
+      // Additional debug logs for paid amount verification
+      print("DEBUG: Generating challan for ${feesType}");
+      print("DEBUG: Reference Fee ID: $referenceFeeId");
+      print("DEBUG: Input Amount: $amount");
+      print("DEBUG: Challan Amount: ${challan.amount}");
+
+      // If this is from payment success dialog, the amount should be the payment amount
+      if (referenceFeeId != null && referenceFeeId.isNotEmpty) {
+        print("DEBUG: This challan is for a specific payment entry");
+      }
 
       final success = await createChallan(challan);
       if (success) {
@@ -340,24 +351,311 @@ class ChallanService {
     }
   }
 
-  // Get count of unpaid fee entries for a student
-  static Future<int> getUnpaidFeeEntriesCount(String studentId) async {
+  // Get remaining balance for a student (total due - total paid)
+  static Future<double> getRemainingBalance(
+    String studentId, {
+    String? feesType,
+  }) async {
     try {
       final db = await DatabaseService.database;
-      // For admission fees, we need to check aggregated payments
-      // This is a simplified version - in real implementation, you'd need to
-      // check across all fee types (admission, monthly, exam, misc)
-      final result = await db.rawQuery(
-        '''
-        SELECT COUNT(*) as count FROM paid_admission_fees
-        WHERE student_id = ?
-      ''',
-        [studentId],
-      );
 
-      final count = result.first['count'] as int? ?? 0;
-      print('Unpaid fee entries count for student $studentId: $count');
-      return count;
+      if (feesType == 'Admission') {
+        // For admission fees, calculate remaining balance
+        final result = await db.rawQuery(
+          '''
+          SELECT
+            COALESCE(SUM(af.amount_due), 0) as total_due,
+            COALESCE(SUM(paf.amount_paid), 0) as total_paid
+          FROM admission_fees af
+          LEFT JOIN paid_admission_fees paf ON af.student_id = paf.student_id
+          WHERE af.student_id = ?
+        ''',
+          [studentId],
+        );
+
+        final totalDue = (result.first['total_due'] as num?)?.toDouble() ?? 0.0;
+        final totalPaid =
+            (result.first['total_paid'] as num?)?.toDouble() ?? 0.0;
+        final remaining = totalDue - totalPaid;
+
+        print(
+          'Admission fee balance for student $studentId: Due=$totalDue, Paid=$totalPaid, Remaining=$remaining',
+        );
+        return remaining > 0 ? remaining : 0.0;
+      } else if (feesType == 'Monthly') {
+        // For monthly fees, calculate remaining balance
+        // First get all monthly fees for this student
+        print(
+          'DEBUG: Querying monthly fees for student ID: $studentId (type: ${studentId.runtimeType})',
+        );
+        final feeResult = await db.rawQuery(
+          '''
+          SELECT id, student_id, amount, paid_amount
+          FROM monthly_fees
+          WHERE student_id = ?
+        ''',
+          [int.parse(studentId)],
+        );
+
+        print(
+          'DEBUG: Found ${feeResult.length} monthly fee records for student $studentId',
+        );
+        print('DEBUG: Raw query result: $feeResult');
+
+        // Debug: Check if the student ID in the database matches what we're querying
+        if (feeResult.isNotEmpty) {
+          final dbStudentId = feeResult.first['student_id'];
+          print(
+            'DEBUG: Database student_id: $dbStudentId (type: ${dbStudentId.runtimeType})',
+          );
+          print(
+            'DEBUG: Query student_id: ${int.parse(studentId)} (type: ${int.parse(studentId).runtimeType})',
+          );
+        }
+
+        double totalDue = 0.0;
+        double totalPaid = 0.0;
+
+        // For each monthly fee entry, add to totals
+        for (final feeRow in feeResult) {
+          final amount = (feeRow['amount'] as num?)?.toDouble() ?? 0.0;
+          final paidAmount = (feeRow['paid_amount'] as num?)?.toDouble() ?? 0.0;
+
+          print(
+            'DEBUG: Monthly fee entry - ID: ${feeRow['id']}, Amount: $amount, Paid: $paidAmount',
+          );
+          totalDue += amount;
+          totalPaid += paidAmount;
+        }
+
+        final remaining = totalDue - totalPaid;
+
+        print(
+          'Monthly fee balance for student $studentId: Due=$totalDue, Paid=$totalPaid, Remaining=$remaining',
+        );
+        return remaining > 0 ? remaining : 0.0;
+      } else if (feesType == 'Exam') {
+        // For exam fees, calculate remaining balance
+        final result = await db.rawQuery(
+          '''
+          SELECT
+            COALESCE(SUM(ef.amount), 0) as total_due,
+            COALESCE(SUM(efp.amount_paid), 0) as total_paid
+          FROM exam_fees_pending ef
+          LEFT JOIN exam_fees_paid efp ON ef.id = efp.exam_fee_id
+          WHERE ef.student_id = ?
+        ''',
+          [studentId],
+        );
+
+        final totalDue = (result.first['total_due'] as num?)?.toDouble() ?? 0.0;
+        final totalPaid =
+            (result.first['total_paid'] as num?)?.toDouble() ?? 0.0;
+        final remaining = totalDue - totalPaid;
+
+        print(
+          'Exam fee balance for student $studentId: Due=$totalDue, Paid=$totalPaid, Remaining=$remaining',
+        );
+        return remaining > 0 ? remaining : 0.0;
+      } else if (feesType == 'Misc') {
+        // For misc fees, calculate remaining balance
+        final result = await db.rawQuery(
+          '''
+          SELECT
+            COALESCE(SUM(mf.amount), 0) as total_due,
+            COALESCE(SUM(mfp.amount_paid), 0) as total_paid
+          FROM misc_fees_pending mf
+          LEFT JOIN misc_fees_paid mfp ON mf.id = mfp.misc_fee_id
+          WHERE mf.student_id = ?
+        ''',
+          [studentId],
+        );
+
+        final totalDue = (result.first['total_due'] as num?)?.toDouble() ?? 0.0;
+        final totalPaid =
+            (result.first['total_paid'] as num?)?.toDouble() ?? 0.0;
+        final remaining = totalDue - totalPaid;
+
+        print(
+          'Misc fee balance for student $studentId: Due=$totalDue, Paid=$totalPaid, Remaining=$remaining',
+        );
+        return remaining > 0 ? remaining : 0.0;
+      } else {
+        // Default: calculate for all fee types combined
+        final admissionResult = await db.rawQuery(
+          '''
+          SELECT
+            COALESCE(SUM(af.amount_due), 0) as total_due,
+            COALESCE(SUM(paf.amount_paid), 0) as total_paid
+          FROM admission_fees af
+          LEFT JOIN paid_admission_fees paf ON af.student_id = paf.student_id
+          WHERE af.student_id = ?
+        ''',
+          [studentId],
+        );
+
+        // For monthly fees in combined query, get all monthly fees for this student
+        final monthlyFeeResult = await db.rawQuery(
+          '''
+          SELECT id, amount, paid_amount
+          FROM monthly_fees
+          WHERE student_id = ?
+        ''',
+          [studentId],
+        );
+
+        double monthlyTotalDue = 0.0;
+        double monthlyTotalPaid = 0.0;
+
+        // For each monthly fee entry, add to totals
+        for (final feeRow in monthlyFeeResult) {
+          final amount = (feeRow['amount'] as num?)?.toDouble() ?? 0.0;
+          final paidAmount = (feeRow['paid_amount'] as num?)?.toDouble() ?? 0.0;
+
+          monthlyTotalDue += amount;
+          monthlyTotalPaid += paidAmount;
+        }
+
+        final examResult = await db.rawQuery(
+          '''
+          SELECT
+            COALESCE(SUM(ef.amount), 0) as total_due,
+            COALESCE(SUM(efp.amount_paid), 0) as total_paid
+          FROM exam_fees_pending ef
+          LEFT JOIN exam_fees_paid efp ON ef.id = efp.exam_fee_id
+          WHERE ef.student_id = ?
+        ''',
+          [studentId],
+        );
+
+        final miscResult = await db.rawQuery(
+          '''
+          SELECT
+            COALESCE(SUM(mf.amount), 0) as total_due,
+            COALESCE(SUM(mfp.amount_paid), 0) as total_paid
+          FROM misc_fees_pending mf
+          LEFT JOIN misc_fees_paid mfp ON mf.id = mfp.misc_fee_id
+          WHERE mf.student_id = ?
+        ''',
+          [studentId],
+        );
+
+        final totalDue =
+            ((admissionResult.first['total_due'] as num?)?.toDouble() ?? 0.0) +
+            monthlyTotalDue +
+            ((examResult.first['total_due'] as num?)?.toDouble() ?? 0.0) +
+            ((miscResult.first['total_due'] as num?)?.toDouble() ?? 0.0);
+
+        final totalPaid =
+            ((admissionResult.first['total_paid'] as num?)?.toDouble() ?? 0.0) +
+            monthlyTotalPaid +
+            ((examResult.first['total_paid'] as num?)?.toDouble() ?? 0.0) +
+            ((miscResult.first['total_paid'] as num?)?.toDouble() ?? 0.0);
+
+        final remaining = totalDue - totalPaid;
+
+        print(
+          'Total fee balance for student $studentId: Due=$totalDue, Paid=$totalPaid, Remaining=$remaining',
+        );
+        return remaining > 0 ? remaining : 0.0;
+      }
+    } catch (e) {
+      print('Error getting remaining balance: $e');
+      return 0.0;
+    }
+  }
+
+  // Get count of unpaid fee entries for a student
+  static Future<int> getUnpaidFeeEntriesCount(
+    String studentId, {
+    String? feesType,
+  }) async {
+    try {
+      final db = await DatabaseService.database;
+
+      if (feesType == 'Admission') {
+        // For admission fees, we need to check aggregated payments
+        final result = await db.rawQuery(
+          '''
+          SELECT COUNT(*) as count FROM paid_admission_fees
+          WHERE student_id = ?
+        ''',
+          [studentId],
+        );
+        final count = result.first['count'] as int? ?? 0;
+        print('Admission fee entries count for student $studentId: $count');
+        return count;
+      } else if (feesType == 'Monthly') {
+        // For monthly fees, count payment history entries
+        final result = await db.rawQuery(
+          '''
+          SELECT COUNT(*) as count FROM monthly_payment_history mph
+          LEFT JOIN monthly_fees mf ON mph.monthly_fee_id = mf.id
+          WHERE mf.student_id = ?
+        ''',
+          [studentId],
+        );
+        final count = result.first['count'] as int? ?? 0;
+        print('Monthly fee entries count for student $studentId: $count');
+        return count;
+      } else if (feesType == 'Exam') {
+        // For exam fees, count paid exam fee entries
+        final result = await db.rawQuery(
+          '''
+          SELECT COUNT(*) as count FROM exam_fees_paid
+          WHERE student_id = ?
+        ''',
+          [studentId],
+        );
+        final count = result.first['count'] as int? ?? 0;
+        print('Exam fee entries count for student $studentId: $count');
+        return count;
+      } else if (feesType == 'Misc') {
+        // For misc fees, count paid misc fee entries
+        final result = await db.rawQuery(
+          '''
+          SELECT COUNT(*) as count FROM misc_fees_paid
+          WHERE student_id = ?
+        ''',
+          [studentId],
+        );
+        final count = result.first['count'] as int? ?? 0;
+        print('Misc fee entries count for student $studentId: $count');
+        return count;
+      } else {
+        // Default fallback - count all paid entries across all fee types
+        final admissionResult = await db.rawQuery(
+          'SELECT COUNT(*) as count FROM paid_admission_fees WHERE student_id = ?',
+          [studentId],
+        );
+        final monthlyResult = await db.rawQuery(
+          '''
+          SELECT COUNT(*) as count FROM monthly_payment_history mph
+          LEFT JOIN monthly_fees mf ON mph.monthly_fee_id = mf.id
+          WHERE mf.student_id = ?
+        ''',
+          [studentId],
+        );
+        final examResult = await db.rawQuery(
+          'SELECT COUNT(*) as count FROM exam_fees_paid WHERE student_id = ?',
+          [studentId],
+        );
+        final miscResult = await db.rawQuery(
+          'SELECT COUNT(*) as count FROM misc_fees_paid WHERE student_id = ?',
+          [studentId],
+        );
+
+        final totalCount =
+            (admissionResult.first['count'] as int? ?? 0) +
+            (monthlyResult.first['count'] as int? ?? 0) +
+            (examResult.first['count'] as int? ?? 0) +
+            (miscResult.first['count'] as int? ?? 0);
+
+        print(
+          'Total paid fee entries count for student $studentId: $totalCount',
+        );
+        return totalCount;
+      }
     } catch (e) {
       print('Error getting unpaid fee entries count: $e');
       return 0;
@@ -486,6 +784,12 @@ class ChallanService {
           print('  Fee Details: $feeDetails');
           print('  Payment Date: $paymentDate');
           print('  Payment Mode: $paymentMode');
+
+          // Additional debug logs for paid amount verification
+          print("DEBUG: Generating challan for ${feesType}");
+          print("DEBUG: Paid Entry ID: $entryId");
+          print("DEBUG: Paid Amount: $amount");
+          print("DEBUG: Final Challan Amount: ${challan.amount}");
 
           final success = await createChallan(challan);
           if (success) {

@@ -7,7 +7,7 @@ import '../../../data/models/misc_fee_model.dart';
 import '../../../data/models/misc_paid_fee_model.dart';
 
 class MiscFeeDetailsDialog extends StatefulWidget {
-  final dynamic fee; // Can be MiscFeeModel or MiscPaidFeeModel
+  final dynamic fee;
 
   const MiscFeeDetailsDialog({super.key, required this.fee});
 
@@ -65,33 +65,16 @@ class _MiscFeeDetailsDialogState extends State<MiscFeeDetailsDialog>
   String get _progressMessage {
     final percentage = (_progressPercentage * 100).round();
     if (percentage == 100) {
-      return '🎉 Congratulations! All misc fees have been paid!';
+      return '🎉 Congratulations! All admission fees have been paid!';
     } else if (percentage >= 75) {
-      return '🚀 Excellent progress! You\'re almost done with misc fees.';
+      return '🚀 Excellent progress! You\'re almost done with admission fees.';
     } else if (percentage >= 50) {
-      return '💪 Great job! You\'re halfway through your misc fees.';
+      return '💪 Great job! You\'re halfway through your admission fees.';
     } else if (percentage >= 25) {
-      return '📈 Good start! Keep up the momentum with misc fees.';
+      return '📈 Good start! Keep up the momentum with admission fees.';
     } else {
-      return '🎯 Let\'s get started! Begin paying your misc fees today.';
+      return '🎯 Let\'s get started! Begin paying your admission fees today.';
     }
-  }
-
-  String get _dialogTitle {
-    if (widget.fee is MiscFeeModel) {
-      final fee = widget.fee as MiscFeeModel;
-      return fee.isPaid ? 'Paid Misc Fee Details' : 'Pending Misc Fee Details';
-    }
-    return 'Paid Misc Fee Details';
-  }
-
-  String get _rollNo {
-    if (widget.fee is MiscFeeModel) {
-      return (widget.fee as MiscFeeModel).rollNo ?? 'N/A';
-    } else if (widget.fee is MiscPaidFeeModel) {
-      return (widget.fee as MiscPaidFeeModel).rollNo ?? 'N/A';
-    }
-    return 'N/A';
   }
 
   @override
@@ -184,7 +167,7 @@ class _MiscFeeDetailsDialogState extends State<MiscFeeDetailsDialog>
               borderRadius: BorderRadius.circular(10.r),
             ),
             child: Icon(
-              Icons.attach_money,
+              Icons.receipt_long,
               color: AppColors.primary,
               size: 20.sp,
             ),
@@ -195,7 +178,7 @@ class _MiscFeeDetailsDialogState extends State<MiscFeeDetailsDialog>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _dialogTitle,
+                  'Admission Fee Details',
                   style: GoogleFonts.poppins(
                     fontSize: 18.sp,
                     fontWeight: FontWeight.w600,
@@ -203,7 +186,7 @@ class _MiscFeeDetailsDialogState extends State<MiscFeeDetailsDialog>
                   ),
                 ),
                 Text(
-                  'Roll No: $_rollNo',
+                  'Roll No: ${widget.fee is MiscFeeModel ? (widget.fee as MiscFeeModel).rollNo ?? 'N/A' : (widget.fee as MiscPaidFeeModel).rollNo ?? 'N/A'}',
                   style: GoogleFonts.poppins(
                     fontSize: 12.sp,
                     color: Colors.grey[600],
@@ -307,22 +290,6 @@ class _MiscFeeDetailsDialogState extends State<MiscFeeDetailsDialog>
   }
 
   Widget _buildStudentDetailsCard() {
-    String studentName = '';
-    String classInfo = '';
-    String feeTypeInfo = '';
-
-    if (widget.fee is MiscFeeModel) {
-      final fee = widget.fee as MiscFeeModel;
-      studentName = fee.studentName ?? 'Unknown';
-      classInfo = '${fee.className ?? 'N/A'} ${fee.section ?? ''}'.trim();
-      feeTypeInfo = '${fee.miscFeeType ?? 'N/A'} - ${fee.month ?? 'N/A'}';
-    } else if (widget.fee is MiscPaidFeeModel) {
-      final fee = widget.fee as MiscPaidFeeModel;
-      studentName = fee.studentName ?? 'Unknown';
-      classInfo = '${fee.className ?? 'N/A'} ${fee.section ?? ''}'.trim();
-      feeTypeInfo = fee.miscFeeType ?? 'N/A';
-    }
-
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
@@ -346,10 +313,19 @@ class _MiscFeeDetailsDialogState extends State<MiscFeeDetailsDialog>
               ],
             ),
             SizedBox(height: 16.h),
-            _buildInfoRow('Student Name:', studentName),
-            _buildInfoRow('Roll No:', _rollNo),
-            _buildInfoRow('Class:', classInfo),
-            _buildInfoRow('Fee Type:', feeTypeInfo),
+            _buildInfoRow(
+              'Student Name:',
+              widget.fee is MiscFeeModel
+                  ? (widget.fee as MiscFeeModel).studentName ?? 'Unknown'
+                  : (widget.fee as MiscPaidFeeModel).studentName ?? 'Unknown',
+            ),
+            _buildInfoRow(
+              'Roll No:',
+              widget.fee is MiscFeeModel
+                  ? (widget.fee as MiscFeeModel).rollNo ?? 'N/A'
+                  : (widget.fee as MiscPaidFeeModel).rollNo ?? 'N/A',
+            ),
+            _buildInfoRow('Class:', 'Not Available'),
           ],
         ),
       ),

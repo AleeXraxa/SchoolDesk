@@ -7,7 +7,7 @@ import '../../../data/models/exam_fee_model.dart';
 import '../../../data/models/exam_paid_fee_model.dart';
 
 class ExamFeeDetailsDialog extends StatefulWidget {
-  final dynamic fee; // Can be ExamFeeModel or ExamPaidFeeModel
+  final dynamic fee;
 
   const ExamFeeDetailsDialog({super.key, required this.fee});
 
@@ -65,33 +65,16 @@ class _ExamFeeDetailsDialogState extends State<ExamFeeDetailsDialog>
   String get _progressMessage {
     final percentage = (_progressPercentage * 100).round();
     if (percentage == 100) {
-      return '🎉 Congratulations! All exam fees have been paid!';
+      return '🎉 Congratulations! All admission fees have been paid!';
     } else if (percentage >= 75) {
-      return '🚀 Excellent progress! You\'re almost done with exam fees.';
+      return '🚀 Excellent progress! You\'re almost done with admission fees.';
     } else if (percentage >= 50) {
-      return '💪 Great job! You\'re halfway through your exam fees.';
+      return '💪 Great job! You\'re halfway through your admission fees.';
     } else if (percentage >= 25) {
-      return '📈 Good start! Keep up the momentum with exam fees.';
+      return '📈 Good start! Keep up the momentum with admission fees.';
     } else {
-      return '🎯 Let\'s get started! Begin paying your exam fees today.';
+      return '🎯 Let\'s get started! Begin paying your admission fees today.';
     }
-  }
-
-  String get _dialogTitle {
-    if (widget.fee is ExamFeeModel) {
-      final fee = widget.fee as ExamFeeModel;
-      return fee.isPaid ? 'Paid Exam Fee Details' : 'Pending Exam Fee Details';
-    }
-    return 'Paid Exam Fee Details';
-  }
-
-  String get _rollNo {
-    if (widget.fee is ExamFeeModel) {
-      return (widget.fee as ExamFeeModel).rollNo ?? 'N/A';
-    } else if (widget.fee is ExamPaidFeeModel) {
-      return (widget.fee as ExamPaidFeeModel).rollNo ?? 'N/A';
-    }
-    return 'N/A';
   }
 
   @override
@@ -183,7 +166,11 @@ class _ExamFeeDetailsDialogState extends State<ExamFeeDetailsDialog>
               color: AppColors.primary.withOpacity(0.1),
               borderRadius: BorderRadius.circular(10.r),
             ),
-            child: Icon(Icons.school, color: AppColors.primary, size: 20.sp),
+            child: Icon(
+              Icons.receipt_long,
+              color: AppColors.primary,
+              size: 20.sp,
+            ),
           ),
           SizedBox(width: 16.w),
           Expanded(
@@ -191,7 +178,7 @@ class _ExamFeeDetailsDialogState extends State<ExamFeeDetailsDialog>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _dialogTitle,
+                  'Admission Fee Details',
                   style: GoogleFonts.poppins(
                     fontSize: 18.sp,
                     fontWeight: FontWeight.w600,
@@ -199,7 +186,7 @@ class _ExamFeeDetailsDialogState extends State<ExamFeeDetailsDialog>
                   ),
                 ),
                 Text(
-                  'Roll No: $_rollNo',
+                  'Roll No: ${widget.fee is ExamFeeModel ? (widget.fee as ExamFeeModel).rollNo ?? 'N/A' : (widget.fee as ExamPaidFeeModel).rollNo ?? 'N/A'}',
                   style: GoogleFonts.poppins(
                     fontSize: 12.sp,
                     color: Colors.grey[600],
@@ -303,22 +290,6 @@ class _ExamFeeDetailsDialogState extends State<ExamFeeDetailsDialog>
   }
 
   Widget _buildStudentDetailsCard() {
-    String studentName = '';
-    String classInfo = '';
-    String examInfo = '';
-
-    if (widget.fee is ExamFeeModel) {
-      final fee = widget.fee as ExamFeeModel;
-      studentName = fee.studentName ?? 'Unknown';
-      classInfo = '${fee.className ?? 'N/A'} ${fee.section ?? ''}'.trim();
-      examInfo = '${fee.examName ?? 'N/A'} - ${fee.examMonth ?? 'N/A'}';
-    } else if (widget.fee is ExamPaidFeeModel) {
-      final fee = widget.fee as ExamPaidFeeModel;
-      studentName = fee.studentName ?? 'Unknown';
-      classInfo = '${fee.className ?? 'N/A'} ${fee.section ?? ''}'.trim();
-      examInfo = fee.examName ?? 'N/A';
-    }
-
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
@@ -342,10 +313,19 @@ class _ExamFeeDetailsDialogState extends State<ExamFeeDetailsDialog>
               ],
             ),
             SizedBox(height: 16.h),
-            _buildInfoRow('Student Name:', studentName),
-            _buildInfoRow('Roll No:', _rollNo),
-            _buildInfoRow('Class:', classInfo),
-            _buildInfoRow('Exam:', examInfo),
+            _buildInfoRow(
+              'Student Name:',
+              widget.fee is ExamFeeModel
+                  ? (widget.fee as ExamFeeModel).studentName ?? 'Unknown'
+                  : (widget.fee as ExamPaidFeeModel).studentName ?? 'Unknown',
+            ),
+            _buildInfoRow(
+              'Roll No:',
+              widget.fee is ExamFeeModel
+                  ? (widget.fee as ExamFeeModel).rollNo ?? 'N/A'
+                  : (widget.fee as ExamPaidFeeModel).rollNo ?? 'N/A',
+            ),
+            _buildInfoRow('Class:', 'Not Available'),
           ],
         ),
       ),

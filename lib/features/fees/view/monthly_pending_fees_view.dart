@@ -1202,7 +1202,9 @@ class MonthlyPendingFeesView extends StatelessWidget {
                                     print(
                                       'Student ID: ${fee.studentId.toString()}',
                                     );
-                                    print('Amount: ${fee.remainingAmount}');
+                                    print(
+                                      'Amount: ${paymentAmount}',
+                                    ); // Use the actual payment amount
                                     print('Month: $month');
                                     print(
                                       'Reference Fee ID: ${fee.id?.toString()}',
@@ -1218,7 +1220,8 @@ class MonthlyPendingFeesView extends StatelessWidget {
                                     final challan = ChallanModel(
                                       studentId: fee.studentId.toString(),
                                       feesType: 'Monthly',
-                                      amount: fee.remainingAmount,
+                                      amount:
+                                          paymentAmount, // Use the actual payment amount
                                       referenceFeeId: fee.id?.toString(),
                                       month: month,
                                       feeDetails: 'Monthly Fee Payment',
