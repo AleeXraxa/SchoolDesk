@@ -8,6 +8,7 @@ import 'admission_challan_view.dart';
 import 'monthly_challan_view.dart';
 import 'exam_challan_view.dart';
 import 'misc_challan_view.dart';
+import 'multiple_challan_view.dart';
 
 class ChallanView extends GetView<ChallanController> {
   const ChallanView({super.key});
@@ -165,9 +166,7 @@ class ChallanView extends GetView<ChallanController> {
       case ChallanSection.miscChallans:
         return const MiscChallanView(key: ValueKey('misc'));
       case ChallanSection.multipleChallans:
-        return const MiscChallanView(
-          key: ValueKey('multiple'),
-        ); // Reuse MiscChallanView for now
+        return const MultipleChallanView(key: ValueKey('multiple'));
     }
   }
 
@@ -343,9 +342,7 @@ class ChallanMainView extends GetView<ChallanController> {
       case ChallanSection.miscChallans:
         return const MiscChallanView(key: ValueKey('misc'));
       case ChallanSection.multipleChallans:
-        return const MiscChallanView(
-          key: ValueKey('multiple'),
-        ); // Reuse MiscChallanView for now
+        return const MultipleChallanView(key: ValueKey('multiple'));
     }
   }
 

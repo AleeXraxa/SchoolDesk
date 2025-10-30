@@ -7,7 +7,6 @@ import '../../../core/theme/app_colors.dart';
 import '../controller/admission_fees_controller.dart';
 import '../../../data/models/aggregated_student_payment_model.dart';
 import '../service/challan_service.dart';
-import 'package:intl/intl.dart';
 
 class PaidFeesView extends StatelessWidget {
   const PaidFeesView({super.key});
@@ -864,6 +863,7 @@ class PaidFeesView extends StatelessWidget {
                               onPressed: selectedEntries.isEmpty
                                   ? null
                                   : () async {
+                                      // Calculate total amount and reference fee IDs
                                       final totalAmount = selectedEntries
                                           .fold<double>(
                                             0.0,

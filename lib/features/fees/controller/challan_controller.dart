@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../data/models/student_model.dart';
 import '../../../data/models/challan_model.dart';
+import '../../../data/models/combined_challan_model.dart';
 import '../../students/service/student_service.dart';
 import '../service/challan_service.dart';
+import '../service/combined_challan_service.dart';
 
 enum ChallanSection {
   admissionChallans,
@@ -40,6 +42,7 @@ class ChallanController extends GetxController {
   RxBool isLoading = true.obs;
   RxList<StudentModel> students = <StudentModel>[].obs;
   RxList<ChallanModel> challans = <ChallanModel>[].obs;
+  RxList<CombinedChallanModel> combinedChallans = <CombinedChallanModel>[].obs;
   RxString searchQuery = ''.obs;
 
   @override
@@ -47,6 +50,7 @@ class ChallanController extends GetxController {
     super.onInit();
     loadStudents();
     loadChallanData();
+    loadCombinedChallans();
   }
 
   Future<void> loadStudents() async {
@@ -183,8 +187,28 @@ class ChallanController extends GetxController {
     }
   }
 
+  Future<void> loadCombinedChallans() async {
+    try {
+      isLoading.value = true;
+      final allCombinedChallans =
+          await CombinedChallanService.fetchAllCombinedChallans();
+      combinedChallans.value = allCombinedChallans;
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'Failed to load combined challans: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
   // Method to refresh challans data
   Future<void> refreshChallans() async {
     await loadChallanData();
+    await loadCombinedChallans();
   }
 }

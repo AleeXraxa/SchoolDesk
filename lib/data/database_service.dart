@@ -42,7 +42,7 @@ class DatabaseService {
       final db = await databaseFactory.openDatabase(
         dbPath,
         options: OpenDatabaseOptions(
-          version: 13,
+          version: 14,
           onCreate: _onCreate,
           onUpgrade: _onUpgrade,
           onOpen: _onOpen,
@@ -524,6 +524,29 @@ class DatabaseService {
         }
       }
 
+      if (oldVersion < 14) {
+        print(
+          'DatabaseService: Creating multiple_challans table for version 14',
+        );
+
+        // Create multiple_challans table for combined challans
+        await db.execute('''
+          CREATE TABLE multiple_challans (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            student_id INTEGER NOT NULL,
+            month TEXT NOT NULL,
+            total_amount REAL NOT NULL,
+            selected_fees_details TEXT NOT NULL,
+            generated_date TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'Pending',
+            created_by TEXT,
+            FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE
+          )
+        ''');
+
+        print('DatabaseService: Created multiple_challans table');
+      }
+
       print('DatabaseService: Database upgrade completed');
     } catch (e, stackTrace) {
       print('DatabaseService: Error during database upgrade: $e');
@@ -707,6 +730,29 @@ class DatabaseService {
           )
         ''');
         print('DatabaseService: Challans table created');
+      }
+
+      // Check if multiple_challans table exists, create if not
+      final multipleChallansTables = await db.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='multiple_challans'",
+      );
+
+      if (multipleChallansTables.isEmpty) {
+        print('DatabaseService: Creating multiple_challans table...');
+        await db.execute('''
+          CREATE TABLE multiple_challans (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            student_id INTEGER NOT NULL,
+            month TEXT NOT NULL,
+            total_amount REAL NOT NULL,
+            selected_fees_details TEXT NOT NULL,
+            generated_date TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'Pending',
+            created_by TEXT,
+            FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE
+          )
+        ''');
+        print('DatabaseService: Multiple challans table created');
       }
     } catch (e, stackTrace) {
       print('DatabaseService: Error during database open: $e');

@@ -7,11 +7,38 @@ import '../../../core/theme/app_colors.dart';
 import '../../../data/models/challan_model.dart';
 import '../controller/challan_controller.dart';
 import '../service/challan_service.dart';
+import '../service/combined_challan_service.dart';
+import '../view/combined_challan_details_dialog.dart';
+import '../../../data/models/combined_challan_model.dart';
 
-class ChallanListView extends StatelessWidget {
+class ChallanListView extends StatefulWidget {
   final ChallanSection challanType;
 
   const ChallanListView({super.key, required this.challanType});
+
+  @override
+  State<ChallanListView> createState() => _ChallanListViewState();
+}
+
+class _ChallanListViewState extends State<ChallanListView> {
+  final RxList<CombinedChallanModel> combinedChallans =
+      <CombinedChallanModel>[].obs;
+
+  @override
+  void initState() {
+    super.initState();
+    loadCombinedChallans();
+  }
+
+  Future<void> loadCombinedChallans() async {
+    try {
+      final allCombinedChallans =
+          await CombinedChallanService.fetchAllCombinedChallans();
+      combinedChallans.value = allCombinedChallans;
+    } catch (e) {
+      print('Error loading combined challans: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -279,7 +306,7 @@ class ChallanListView extends StatelessWidget {
   }
 
   List<ChallanModel> _getAllChallansForSection(ChallanController controller) {
-    final allChallans = controller.getChallansForSection(challanType);
+    final allChallans = controller.getChallansForSection(widget.challanType);
 
     // Sort by date generated (most recent first)
     allChallans.sort((a, b) => b.dateGenerated.compareTo(a.dateGenerated));
@@ -288,7 +315,7 @@ class ChallanListView extends StatelessWidget {
   }
 
   String _getSectionTitle() {
-    switch (challanType) {
+    switch (widget.challanType) {
       case ChallanSection.admissionChallans:
         return 'Admission';
       case ChallanSection.monthlyChallans:
