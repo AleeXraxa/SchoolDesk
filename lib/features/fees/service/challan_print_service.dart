@@ -698,31 +698,21 @@ class ChallanPrintService {
 
           pw.SizedBox(height: 1),
 
-          // Footer Information
+          // Bank Stamp and Signature Section
           pw.Container(
+            width: double.infinity,
+            height: 50,
             padding: const pw.EdgeInsets.all(6),
+            decoration: pw.BoxDecoration(
+              border: pw.Border.all(color: PdfColors.black, width: 0.5),
+            ),
             child: pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              crossAxisAlignment: pw.CrossAxisAlignment.center,
               children: [
                 pw.Text(
-                  'Paid Fee will not be refunded.',
-                  style: const pw.TextStyle(fontSize: 7),
-                ),
-                pw.Text(
-                  'Rs. 100 Late Fee per month will be charged after due date.',
-                  style: const pw.TextStyle(fontSize: 7),
-                ),
-                pw.Text(
-                  'Rs. 50 will be charged if voucher is lost or duplicate.',
-                  style: const pw.TextStyle(fontSize: 7),
-                ),
-                pw.Text(
-                  'This voucher will not be valid after validation date.',
-                  style: const pw.TextStyle(fontSize: 7),
-                ),
-                pw.Text(
-                  'Note: Kindly do not accept any voucher if correction or overwriting is found.',
-                  style: const pw.TextStyle(fontSize: 7),
+                  'Bank Stamp and Signature',
+                  style: const pw.TextStyle(fontSize: 8),
+                  textAlign: pw.TextAlign.center,
                 ),
               ],
             ),
@@ -730,56 +720,60 @@ class ChallanPrintService {
 
           pw.SizedBox(height: 1),
 
-          // Signatures
-          pw.Row(
-            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-            children: [
-              pw.Column(
-                children: [
-                  pw.Text('Bank Stamp', style: const pw.TextStyle(fontSize: 8)),
-                  pw.SizedBox(height: 20),
-                  pw.Container(width: 60, height: 1, color: PdfColors.black),
-                ],
-              ),
-              pw.Column(
-                children: [
-                  pw.Text(
-                    'Authorized Signature',
-                    style: const pw.TextStyle(fontSize: 8),
-                  ),
-                  pw.SizedBox(height: 20),
-                  pw.Container(width: 60, height: 1, color: PdfColors.black),
-                ],
-              ),
-            ],
-          ),
-
-          pw.SizedBox(height: 1),
-
-          // Issue and Due dates
+          // Terms and Conditions
           pw.Container(
-            padding: const pw.EdgeInsets.symmetric(vertical: 4, horizontal: 6),
+            padding: const pw.EdgeInsets.all(6),
             child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
-                pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Text(
-                      'Issue Date: ${DateFormat('dd/MM/yyyy').format(issueDate)}',
-                      style: const pw.TextStyle(fontSize: 8),
-                    ),
-                    pw.Text(
-                      'Due Date: ${DateFormat('dd/MM/yyyy').format(dueDate)}',
-                      style: const pw.TextStyle(fontSize: 8),
-                    ),
-                  ],
+                pw.Text(
+                  'Paid Fees will not be refunded.',
+                  style: pw.TextStyle(
+                    fontSize: 6,
+                    fontWeight: pw.FontWeight.bold,
+                    font: _customFontBold,
+                  ),
                 ),
-                pw.SizedBox(height: 2),
-                pw.Align(
-                  alignment: pw.Alignment.centerRight,
+                pw.Text(
+                  'Rs. 100 Late fee per month will be charged after due date.',
+                  style: pw.TextStyle(
+                    fontSize: 6,
+                    fontWeight: pw.FontWeight.bold,
+                    font: _customFontBold,
+                  ),
+                ),
+                pw.Text(
+                  'Rs. 50 will be charged in case Voucher is lost or duplicate.',
+                  style: pw.TextStyle(
+                    fontSize: 6,
+                    fontWeight: pw.FontWeight.bold,
+                    font: _customFontBold,
+                  ),
+                ),
+                pw.Text(
+                  'This voucher will not be valid after validation date.',
+                  style: pw.TextStyle(
+                    fontSize: 6,
+                    fontWeight: pw.FontWeight.bold,
+                    font: _customFontBold,
+                  ),
+                ),
+                pw.Container(
+                  padding: const pw.EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 2,
+                  ),
+                  decoration: pw.BoxDecoration(
+                    color: PdfColors.blue200,
+                    borderRadius: pw.BorderRadius.circular(2),
+                  ),
                   child: pw.Text(
-                    'Valid Upto: ${DateFormat('dd/MM/yyyy').format(voucherValidUpto)}',
-                    style: const pw.TextStyle(fontSize: 8),
+                    'Note: Kindly do not accept any Voucher if correction or over writing is found.',
+                    style: pw.TextStyle(
+                      fontSize: 6,
+                      fontWeight: pw.FontWeight.bold,
+                      font: _customFontBold,
+                    ),
                   ),
                 ),
               ],
