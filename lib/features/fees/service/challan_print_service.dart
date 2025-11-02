@@ -373,7 +373,7 @@ class ChallanPrintService {
             ],
           ),
 
-          pw.SizedBox(height: 12),
+          pw.SizedBox(height: 1),
 
           // Student Info Block
           pw.Container(
@@ -524,14 +524,14 @@ class ChallanPrintService {
             ),
           ),
 
-          pw.SizedBox(height: 12),
+          pw.SizedBox(height: 1),
 
-          // Fees Table
+          // Fees Table - Exact layout as specified
           pw.Table(
             border: pw.TableBorder.all(color: PdfColors.black, width: 0.5),
             columnWidths: {
-              0: const pw.FlexColumnWidth(2),
-              1: const pw.FlexColumnWidth(1.5),
+              0: const pw.FlexColumnWidth(1.8),
+              1: const pw.FlexColumnWidth(1.2),
               2: const pw.FlexColumnWidth(2),
             },
             children: [
@@ -545,7 +545,7 @@ class ChallanPrintService {
                       'FEES DETAIL',
                       style: pw.TextStyle(
                         fontWeight: pw.FontWeight.bold,
-                        fontSize: 8,
+                        fontSize: 6,
                         font: _customFontBold,
                       ),
                       textAlign: pw.TextAlign.center,
@@ -557,7 +557,7 @@ class ChallanPrintService {
                       'AMOUNT',
                       style: pw.TextStyle(
                         fontWeight: pw.FontWeight.bold,
-                        fontSize: 8,
+                        fontSize: 6,
                         font: _customFontBold,
                       ),
                       textAlign: pw.TextAlign.center,
@@ -566,10 +566,10 @@ class ChallanPrintService {
                   pw.Container(
                     padding: const pw.EdgeInsets.all(4),
                     child: pw.Text(
-                      'MONTH FEE/LATE',
+                      'MONTH',
                       style: pw.TextStyle(
                         fontWeight: pw.FontWeight.bold,
-                        fontSize: 8,
+                        fontSize: 6,
                         font: _customFontBold,
                       ),
                       textAlign: pw.TextAlign.center,
@@ -577,43 +577,126 @@ class ChallanPrintService {
                   ),
                 ],
               ),
-              // Fee rows
-              ..._buildFeeRows(challan),
-              // Total row
-              pw.TableRow(
-                children: [
-                  pw.Container(
-                    padding: const pw.EdgeInsets.all(4),
-                    child: pw.Text(
-                      'TOTAL',
-                      style: pw.TextStyle(
-                        fontWeight: pw.FontWeight.bold,
-                        fontSize: 8,
-                      ),
-                      textAlign: pw.TextAlign.center,
-                    ),
-                  ),
-                  pw.Container(
-                    padding: const pw.EdgeInsets.all(4),
-                    child: pw.Text(
-                      'PKR ${challan.amount.toStringAsFixed(0)}',
-                      style: pw.TextStyle(
-                        fontWeight: pw.FontWeight.bold,
-                        fontSize: 8,
-                      ),
-                      textAlign: pw.TextAlign.center,
-                    ),
-                  ),
-                  pw.Container(
-                    padding: const pw.EdgeInsets.all(4),
-                    child: pw.Text('', style: const pw.TextStyle(fontSize: 8)),
-                  ),
-                ],
-              ),
+              // Fee rows - dynamically populated based on challan type
+              ..._buildDynamicFeeRows(challan),
             ],
           ),
 
-          pw.SizedBox(height: 12),
+          pw.SizedBox(height: 1),
+
+          // Note Section
+          pw.Container(
+            padding: const pw.EdgeInsets.all(6),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text(
+                  'Note:',
+                  style: pw.TextStyle(
+                    fontWeight: pw.FontWeight.bold,
+                    fontSize: 8,
+                    font: _customFontBold,
+                  ),
+                ),
+                pw.Container(height: 0.3, color: PdfColors.black),
+                pw.SizedBox(height: 16),
+                pw.Container(height: 0.3, color: PdfColors.black),
+              ],
+            ),
+          ),
+
+          // Total Amount Section
+          pw.Container(
+            padding: const pw.EdgeInsets.all(6),
+            child: pw.Column(
+              children: [
+                pw.Row(
+                  children: [
+                    pw.Text(
+                      'Total Amount:',
+                      style: pw.TextStyle(
+                        fontWeight: pw.FontWeight.bold,
+                        fontSize: 9,
+                        font: _customFontBold,
+                      ),
+                    ),
+                    pw.Spacer(),
+                    pw.Text(
+                      'PKR ${challan.amount.toStringAsFixed(0)}',
+                      style: pw.TextStyle(
+                        fontWeight: pw.FontWeight.bold,
+                        fontSize: 9,
+                        font: _customFontBold,
+                      ),
+                    ),
+                  ],
+                ),
+                pw.Container(height: 0.2, color: PdfColors.black),
+                pw.SizedBox(height: 4),
+                pw.Row(
+                  children: [
+                    pw.Text(
+                      'Within Due Date:',
+                      style: const pw.TextStyle(fontSize: 8),
+                    ),
+                    pw.Spacer(),
+                    pw.Text(
+                      'PKR ${challan.amount.toStringAsFixed(0)}',
+                      style: const pw.TextStyle(fontSize: 8),
+                    ),
+                  ],
+                ),
+                pw.Container(height: 0.2, color: PdfColors.black),
+                pw.SizedBox(height: 4),
+                pw.Row(
+                  children: [
+                    pw.Text(
+                      'After Due Date:',
+                      style: const pw.TextStyle(fontSize: 8),
+                    ),
+                    pw.Spacer(),
+                    pw.Text(
+                      'PKR ${(challan.amount + 100).toStringAsFixed(0)}',
+                      style: const pw.TextStyle(fontSize: 8),
+                    ),
+                  ],
+                ),
+                pw.Container(height: 0.2, color: PdfColors.black),
+                pw.SizedBox(height: 4),
+                pw.Row(
+                  children: [
+                    pw.Text(
+                      'Due Date:',
+                      style: const pw.TextStyle(fontSize: 8),
+                    ),
+                    pw.Spacer(),
+                    pw.Text(
+                      DateFormat('dd/MM/yyyy').format(dueDate),
+                      style: const pw.TextStyle(fontSize: 8),
+                    ),
+                  ],
+                ),
+                pw.Container(height: 0.2, color: PdfColors.black),
+                pw.SizedBox(height: 4),
+                pw.Row(
+                  children: [
+                    pw.Text(
+                      'Voucher Valid Upto:',
+                      style: const pw.TextStyle(fontSize: 8),
+                    ),
+                    pw.Spacer(),
+                    pw.Text(
+                      DateFormat('dd/MM/yyyy').format(voucherValidUpto),
+                      style: const pw.TextStyle(fontSize: 8),
+                    ),
+                  ],
+                ),
+                pw.Container(height: 0.2, color: PdfColors.black),
+              ],
+            ),
+          ),
+
+          pw.SizedBox(height: 1),
 
           // Footer Information
           pw.Container(
@@ -645,7 +728,7 @@ class ChallanPrintService {
             ),
           ),
 
-          pw.SizedBox(height: 16),
+          pw.SizedBox(height: 1),
 
           // Signatures
           pw.Row(
@@ -671,7 +754,7 @@ class ChallanPrintService {
             ],
           ),
 
-          pw.SizedBox(height: 8),
+          pw.SizedBox(height: 1),
 
           // Issue and Due dates
           pw.Container(
@@ -705,6 +788,77 @@ class ChallanPrintService {
         ],
       ),
     );
+  }
+
+  static List<pw.TableRow> _buildDynamicFeeRows(ChallanModel challan) {
+    final rows = <pw.TableRow>[];
+
+    // Always show 5 rows: Monthly, Admission, Examination, Certificate, Other Fees
+    // Fill in the appropriate row based on challan type
+    final feeRows = [
+      {'label': 'Monthly', 'amount': '', 'month': ''},
+      {'label': 'Admission', 'amount': '', 'month': ''},
+      {'label': 'Examination', 'amount': '', 'month': ''},
+      {'label': 'Certificate', 'amount': '', 'month': ''},
+      {'label': 'Other Fees', 'amount': '', 'month': ''},
+    ];
+
+    // Fill in the amount and month based on challan type
+    switch (challan.feesType.toLowerCase()) {
+      case 'admission':
+        feeRows[1]['amount'] = challan.amount.toStringAsFixed(0);
+        feeRows[1]['month'] = challan.month ?? '';
+        break;
+      case 'monthly':
+        feeRows[0]['amount'] = challan.amount.toStringAsFixed(0);
+        feeRows[0]['month'] = challan.month ?? '';
+        break;
+      case 'exam':
+        feeRows[2]['amount'] = challan.amount.toStringAsFixed(0);
+        feeRows[2]['month'] = challan.examDetails ?? '';
+        break;
+      case 'misc':
+        feeRows[4]['amount'] = challan.amount.toStringAsFixed(0);
+        feeRows[4]['month'] = challan.feeDetails ?? '';
+        break;
+      default:
+        feeRows[4]['amount'] = challan.amount.toStringAsFixed(0);
+        feeRows[4]['month'] = challan.feesType;
+    }
+
+    // Create TableRow for each fee row
+    for (final feeRow in feeRows) {
+      rows.add(
+        pw.TableRow(
+          children: [
+            pw.Container(
+              padding: const pw.EdgeInsets.all(4),
+              child: pw.Text(
+                feeRow['label'] as String,
+                style: const pw.TextStyle(fontSize: 8),
+              ),
+            ),
+            pw.Container(
+              padding: const pw.EdgeInsets.all(4),
+              child: pw.Text(
+                feeRow['amount'] as String,
+                style: const pw.TextStyle(fontSize: 8),
+                textAlign: pw.TextAlign.center,
+              ),
+            ),
+            pw.Container(
+              padding: const pw.EdgeInsets.all(4),
+              child: pw.Text(
+                feeRow['month'] as String,
+                style: const pw.TextStyle(fontSize: 8),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return rows;
   }
 
   static List<pw.TableRow> _buildFeeRows(ChallanModel challan) {
