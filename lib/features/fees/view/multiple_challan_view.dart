@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/database_service.dart';
 import '../service/challan_service.dart';
+import '../service/challan_print_service.dart';
 import '../service/combined_challan_service.dart';
 
 class MultipleChallanView extends StatelessWidget {
@@ -258,6 +259,7 @@ class MultipleChallanView extends StatelessWidget {
     final selectedEntries = <Map<String, dynamic>>[].obs;
     final isLoading = false.obs;
     final paidEntries = <Map<String, dynamic>>[].obs;
+    final foundStudentData = Rx<Map<String, dynamic>?>(null);
 
     // Debug: Fetch all students when dialog opens
     _debugFetchAllStudents();
@@ -440,10 +442,17 @@ class MultipleChallanView extends StatelessWidget {
                                   studentIdController.text.trim().isEmpty
                               ? null
                               : () async {
-                                  // First check if student exists
-                                  await _checkStudentByRollNo(
-                                    studentIdController.text.trim(),
-                                  );
+                                  // First check if student exists and get their ID
+                                  final rollNo = studentIdController.text
+                                      .trim();
+                                  final studentData =
+                                      await _checkStudentByRollNo(rollNo);
+
+                                  if (studentData == null) {
+                                    return; // Student not found, error already shown
+                                  }
+
+                                  foundStudentData.value = studentData;
 
                                   isLoading.value = true;
                                   try {
@@ -746,10 +755,10 @@ class MultipleChallanView extends StatelessWidget {
                                       _showChallanTypeDialog(
                                         context,
                                         selectedMonth.value,
-                                        int.tryParse(
-                                              studentIdController.text,
-                                            ) ??
-                                            0,
+                                        int.parse(
+                                          foundStudentData.value!['id']
+                                              .toString(),
+                                        ),
                                         selectedEntries,
                                       );
                                     },
@@ -803,7 +812,7 @@ class MultipleChallanView extends StatelessWidget {
     }
   }
 
-  Future<void> _checkStudentByRollNo(String rollNo) async {
+  Future<Map<String, dynamic>?> _checkStudentByRollNo(String rollNo) async {
     try {
       final db = await DatabaseService.database;
       final studentResult = await db.query(
@@ -828,6 +837,7 @@ class MultipleChallanView extends StatelessWidget {
           colorText: Colors.white,
           duration: const Duration(seconds: 3),
         );
+        return student;
       } else {
         print('❌ DEBUG: Student NOT FOUND for Roll No: $rollNo');
         print('   Searched roll_no: "${rollNo.trim()}"');
@@ -840,6 +850,7 @@ class MultipleChallanView extends StatelessWidget {
           colorText: Colors.white,
           duration: const Duration(seconds: 3),
         );
+        return null;
       }
     } catch (e) {
       print('Error checking student by roll no: $e');
@@ -850,6 +861,7 @@ class MultipleChallanView extends StatelessWidget {
         backgroundColor: Colors.orange,
         colorText: Colors.white,
       );
+      return null;
     }
   }
 
@@ -861,13 +873,36 @@ class MultipleChallanView extends StatelessWidget {
     try {
       final db = await DatabaseService.database;
 
+      print('=== DEBUG: Fetching paid entries ===');
+      print('Roll No: "$rollNo"');
+
       // First get student ID from roll number
       final studentResult = await db.query(
         'students',
         where: 'roll_no = ?',
-        whereArgs: [rollNo],
+        whereArgs: [rollNo.trim()],
         limit: 1,
       );
+
+      print('Student query result count: ${studentResult.length}');
+
+      if (studentResult.isNotEmpty) {
+        final student = studentResult.first;
+        print(
+          'Found student: ID=${student['id']}, Name=${student['student_name']}, Roll=${student['roll_no']}',
+        );
+      } else {
+        print('No student found with roll number: "$rollNo"');
+
+        // Debug: Show all students
+        final allStudents = await db.query('students');
+        print('All students in database:');
+        for (var student in allStudents) {
+          print(
+            '  ID: ${student['id']}, Roll: "${student['roll_no']}", Name: ${student['student_name']}',
+          );
+        }
+      }
 
       if (studentResult.isEmpty) {
         Get.snackbar(
@@ -881,6 +916,7 @@ class MultipleChallanView extends StatelessWidget {
       }
 
       final studentId = studentResult.first['id'].toString();
+      print('Using student ID: $studentId');
 
       // Parse the selected month to get year and month
       final monthDate = DateFormat('MMMM yyyy').parse(selectedMonth);
@@ -1305,18 +1341,36 @@ class MultipleChallanView extends StatelessWidget {
                                 horizontal: 4.w,
                                 vertical: 6.h,
                               ),
-                              child: Center(
-                                child: IconButton(
-                                  onPressed: () =>
-                                      _showCombinedChallanDetails(challan),
-                                  icon: Icon(Icons.visibility, size: 18.sp),
-                                  tooltip: 'View Details',
-                                  color: Colors.blue[600],
-                                  style: IconButton.styleFrom(
-                                    backgroundColor: Colors.blue[50],
-                                    padding: EdgeInsets.all(6.w),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  IconButton(
+                                    onPressed: () =>
+                                        _showCombinedChallanDetails(challan),
+                                    icon: Icon(Icons.visibility, size: 18.sp),
+                                    tooltip: 'View Details',
+                                    color: Colors.blue[600],
+                                    style: IconButton.styleFrom(
+                                      backgroundColor: Colors.blue[50],
+                                      padding: EdgeInsets.all(6.w),
+                                    ),
                                   ),
-                                ),
+                                  SizedBox(width: 4.w),
+                                  IconButton(
+                                    onPressed: () =>
+                                        ChallanPrintService.printChallan(
+                                          challan['id'].toString(),
+                                          context,
+                                        ),
+                                    icon: Icon(Icons.print, size: 18.sp),
+                                    tooltip: 'Print Challan',
+                                    color: Colors.green[600],
+                                    style: IconButton.styleFrom(
+                                      backgroundColor: Colors.green[50],
+                                      padding: EdgeInsets.all(6.w),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
@@ -1342,7 +1396,7 @@ class MultipleChallanView extends StatelessWidget {
           s.student_name,
           s.roll_no
         FROM multiple_challans mc
-        LEFT JOIN students s ON CAST(mc.student_id AS TEXT) = s.roll_no
+        LEFT JOIN students s ON mc.student_id = s.id
         ORDER BY mc.generated_date DESC
       ''');
 
@@ -1788,6 +1842,9 @@ class MultipleChallanView extends StatelessWidget {
     int studentId,
     List<Map<String, dynamic>> selectedEntries,
   ) {
+    final studentIdController = TextEditingController(
+      text: studentId.toString(),
+    );
     Get.dialog(
       Dialog(
         backgroundColor: Colors.transparent,

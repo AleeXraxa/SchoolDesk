@@ -5,7 +5,9 @@ import '../../../features/fees/service/monthly_fees_service.dart';
 class StudentService {
   static Future<int> addStudent(StudentModel studentModel) async {
     try {
-      print('StudentService: Adding student: ${studentModel.studentName}');
+      print(
+        'StudentService: Adding student: ${studentModel.studentName}, Roll No: ${studentModel.rollNo}',
+      );
       final db = await DatabaseService.database;
       final id = await db.insert('students', studentModel.toJson());
       print('StudentService: Successfully added student with ID: $id');
@@ -99,6 +101,41 @@ class StudentService {
       return result > 0;
     } catch (e, stackTrace) {
       print('StudentService: Error deleting student: $e');
+      print('StudentService: Stack trace: $stackTrace');
+      rethrow;
+    }
+  }
+
+  static Future<String> getNextRollNumber() async {
+    try {
+      final db = await DatabaseService.database;
+      final result = await db.query('students', columns: ['roll_no']);
+      print(
+        'StudentService: Found ${result.length} existing students for roll number generation',
+      );
+
+      int maxNumber = 0;
+      for (var row in result) {
+        String rollNo = row['roll_no'] as String;
+        print('StudentService: Checking roll number: $rollNo');
+        int? num;
+        if (rollNo.startsWith('BMS-')) {
+          String numStr = rollNo.substring(4);
+          num = int.tryParse(numStr);
+        } else {
+          num = int.tryParse(rollNo);
+        }
+        if (num != null && num > maxNumber) {
+          maxNumber = num;
+        }
+      }
+
+      int nextNumber = maxNumber + 1;
+      String generatedRollNo = 'BMS-${nextNumber.toString().padLeft(5, '0')}';
+      print('StudentService: Generated next roll number: $generatedRollNo');
+      return generatedRollNo;
+    } catch (e, stackTrace) {
+      print('StudentService: Error generating next roll number: $e');
       print('StudentService: Stack trace: $stackTrace');
       rethrow;
     }

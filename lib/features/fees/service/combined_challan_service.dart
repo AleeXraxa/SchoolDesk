@@ -16,11 +16,22 @@ class CombinedChallanService {
       final db = await DatabaseService.database;
 
       // Validate required fields
-      if (challan.studentId <= 0 ||
-          challan.month.isEmpty ||
-          challan.totalAmount <= 0 ||
-          challan.selectedFeesDetails.isEmpty) {
-        print('Error: Invalid combined challan data');
+      if (challan.studentId <= 0) {
+        print('Error: Invalid student ID: ${challan.studentId}');
+        return false;
+      }
+      if (challan.month.isEmpty) {
+        print('Error: Month is empty');
+        return false;
+      }
+      if (challan.totalAmount <= 0) {
+        print(
+          'Error: Total amount must be greater than 0: ${challan.totalAmount}',
+        );
+        return false;
+      }
+      if (challan.selectedFeesDetails.isEmpty) {
+        print('Error: No fees details selected');
         return false;
       }
 

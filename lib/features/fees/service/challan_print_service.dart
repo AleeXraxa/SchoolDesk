@@ -4,9 +4,12 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:intl/intl.dart';
+import 'dart:convert';
 import '../../../data/models/challan_model.dart';
 import '../../../data/models/student_model.dart';
+import '../../../data/database_service.dart';
 import 'challan_service.dart';
+import 'combined_challan_service.dart';
 
 // Custom font setup for Unicode support
 final pw.Font _customFont = pw.Font.helvetica();
@@ -18,13 +21,19 @@ class ChallanPrintService {
     BuildContext context,
   ) async {
     try {
-      // Fetch challan data with student details
-      final challanData = await ChallanService.fetchChallanWithStudent(
-        challanId,
-      );
+      // First try to fetch from regular challans table
+      var challanData = await ChallanService.fetchChallanWithStudent(challanId);
+
+      // If not found in regular challans, try combined challans
+      if (challanData == null) {
+        print(
+          'Challan not found in regular challans, trying combined challans...',
+        );
+        challanData = await _fetchCombinedChallanWithStudent(challanId);
+      }
 
       if (challanData == null) {
-        throw Exception('Challan not found');
+        throw Exception('Challan not found in any table');
       }
 
       // Generate PDF
@@ -98,6 +107,122 @@ class ChallanPrintService {
     );
   }
 
+  static Future<Map<String, dynamic>?> _fetchCombinedChallanWithStudent(
+    String challanId,
+  ) async {
+    try {
+      final db = await DatabaseService.database;
+      final List<Map<String, dynamic>> maps = await db.rawQuery(
+        '''
+          SELECT mc.*, s.*
+          FROM multiple_challans mc
+          LEFT JOIN students s ON mc.student_id = s.id
+          WHERE mc.id = ?
+          LIMIT 1
+        ''',
+        [int.parse(challanId)],
+      );
+
+      if (maps.isNotEmpty) {
+        final map = maps.first;
+        // Convert student data to StudentModel format
+        final studentData = {
+          'id': map['id'],
+          'roll_no': map['roll_no'],
+          'gr_no': map['gr_no'],
+          'student_name': map['student_name'],
+          'father_name': map['father_name'],
+          'caste': map['caste'],
+          'place_of_birth': map['place_of_birth'],
+          'dob_figures': map['dob_figures'],
+          'dob_words': map['dob_words'],
+          'gender': map['gender'],
+          'religion': map['religion'],
+          'father_contact': map['father_contact'],
+          'mother_contact': map['mother_contact'],
+          'address': map['address'],
+          'admission_date': map['admission_date'],
+          'class_id': map['class_id'],
+          'class_name': map['class_name'],
+          'section': map['section'],
+          'admission_fees': map['admission_fees'],
+          'monthly_fees': map['monthly_fees'],
+          'status': map['status'],
+          'is_monthly_fee_synced': map['is_monthly_fee_synced'],
+        };
+
+        // Parse the selected_fees_details to get individual fee amounts
+        final selectedFeesDetails = map['selected_fees_details'];
+        double admissionAmount = 0.0;
+        double monthlyAmount = 0.0;
+        double examAmount = 0.0;
+        double miscAmount = 0.0;
+
+        if (selectedFeesDetails != null && selectedFeesDetails is String) {
+          try {
+            final feesList = jsonDecode(selectedFeesDetails) as List<dynamic>;
+            for (final fee in feesList) {
+              final type = fee['type'] as String?;
+              final amount = (fee['amount'] as num?)?.toDouble() ?? 0.0;
+
+              switch (type?.toLowerCase()) {
+                case 'admission':
+                  admissionAmount += amount;
+                  break;
+                case 'monthly':
+                  monthlyAmount += amount;
+                  break;
+                case 'exam':
+                  examAmount += amount;
+                  break;
+                case 'misc':
+                  miscAmount += amount;
+                  break;
+              }
+            }
+          } catch (e) {
+            print('Error parsing fees details: $e');
+          }
+        }
+
+        // Create a challan-like structure for combined challans with individual fee breakdowns
+        final challanData = {
+          'challan_id': 'CC-${map['id']}', // Combined Challan prefix
+          'student_id': map['student_id'].toString(),
+          'fees_type': 'Combined',
+          'amount': (map['total_amount'] as num?)?.toDouble() ?? 0.0,
+          'status': map['status'] ?? 'Pending',
+          'date_generated':
+              map['generated_date'] ?? DateTime.now().toIso8601String(),
+          'month': map['month'] ?? '',
+          'fee_details': 'Combined Challan - Multiple Fees',
+          // Add individual fee amounts for PDF generation
+          'admission_amount': admissionAmount,
+          'monthly_amount': monthlyAmount,
+          'exam_amount': examAmount,
+          'misc_amount': miscAmount,
+        };
+
+        print('Final challanData with amounts:');
+        print('admission_amount: ${challanData['admission_amount']}');
+        print('monthly_amount: ${challanData['monthly_amount']}');
+        print('exam_amount: ${challanData['exam_amount']}');
+        print('misc_amount: ${challanData['misc_amount']}');
+
+        print('Combined challan data created:');
+        print(
+          'Admission: $admissionAmount, Monthly: $monthlyAmount, Exam: $examAmount, Misc: $miscAmount',
+        );
+
+        return {...challanData, 'student': studentData};
+      }
+      return null;
+    } catch (e) {
+      print('Error fetching combined challan with student: $e');
+      return null;
+    }
+  }
+
   static Future<pw.Document> _generateChallanPDF(
     Map<String, dynamic> challanData,
   ) async {
@@ -108,6 +233,9 @@ class ChallanPrintService {
     final student = challanData['student'] != null
         ? StudentModel.fromJson(challanData['student'])
         : null;
+
+    // Store the original challanData for fee breakdown access
+    final originalChallanData = challanData;
 
     // Calculate dates
     final issueDate = challan.dateGenerated;
@@ -122,6 +250,7 @@ class ChallanPrintService {
       issueDate,
       dueDate,
       voucherValidUpto,
+      originalChallanData,
     );
     final bankCopy = await _buildChallanCopy(
       'BANK COPY',
@@ -130,6 +259,7 @@ class ChallanPrintService {
       issueDate,
       dueDate,
       voucherValidUpto,
+      originalChallanData,
     );
     final studentCopy = await _buildChallanCopy(
       'STUDENT COPY',
@@ -138,6 +268,7 @@ class ChallanPrintService {
       issueDate,
       dueDate,
       voucherValidUpto,
+      originalChallanData,
     );
 
     pdf.addPage(
@@ -205,6 +336,7 @@ class ChallanPrintService {
     DateTime issueDate,
     DateTime dueDate,
     DateTime voucherValidUpto,
+    Map<String, dynamic>? originalChallanData,
   ) async {
     // Load school logo - handle missing logo gracefully
     pw.MemoryImage? schoolLogoImage;
@@ -578,7 +710,7 @@ class ChallanPrintService {
                 ],
               ),
               // Fee rows - dynamically populated based on challan type
-              ..._buildDynamicFeeRows(challan),
+              ..._buildDynamicFeeRows(challan, originalChallanData),
             ],
           ),
 
@@ -784,7 +916,10 @@ class ChallanPrintService {
     );
   }
 
-  static List<pw.TableRow> _buildDynamicFeeRows(ChallanModel challan) {
+  static List<pw.TableRow> _buildDynamicFeeRows(
+    ChallanModel challan, [
+    Map<String, dynamic>? originalData,
+  ]) {
     final rows = <pw.TableRow>[];
 
     // Always show 5 rows: Monthly, Admission, Examination, Certificate, Other Fees
@@ -797,27 +932,69 @@ class ChallanPrintService {
       {'label': 'Other Fees', 'amount': '', 'month': ''},
     ];
 
-    // Fill in the amount and month based on challan type
-    switch (challan.feesType.toLowerCase()) {
-      case 'admission':
-        feeRows[1]['amount'] = challan.amount.toStringAsFixed(0);
-        feeRows[1]['month'] = challan.month ?? '';
-        break;
-      case 'monthly':
-        feeRows[0]['amount'] = challan.amount.toStringAsFixed(0);
-        feeRows[0]['month'] = challan.month ?? '';
-        break;
-      case 'exam':
-        feeRows[2]['amount'] = challan.amount.toStringAsFixed(0);
-        feeRows[2]['month'] = challan.examDetails ?? '';
-        break;
-      case 'misc':
-        feeRows[4]['amount'] = challan.amount.toStringAsFixed(0);
-        feeRows[4]['month'] = challan.feeDetails ?? '';
-        break;
-      default:
-        feeRows[4]['amount'] = challan.amount.toStringAsFixed(0);
-        feeRows[4]['month'] = challan.feesType;
+    // Check if this is a combined challan (has individual amounts)
+    // Use originalData if available (contains the parsed amounts), otherwise fall back to challan.toMap()
+    final challanData = originalData ?? challan.toMap();
+    final admissionAmount = challanData['admission_amount'] as double?;
+    final monthlyAmount = challanData['monthly_amount'] as double?;
+    final examAmount = challanData['exam_amount'] as double?;
+    final miscAmount = challanData['misc_amount'] as double?;
+
+    print('Challan data keys: ${challanData.keys.toList()}');
+    print('Admission amount from challanData: $admissionAmount');
+    print('Monthly amount from challanData: $monthlyAmount');
+    print('Exam amount from challanData: $examAmount');
+    print('Misc amount from challanData: $miscAmount');
+
+    print('Building fee rows - checking amounts:');
+    print(
+      'Admission: $admissionAmount, Monthly: $monthlyAmount, Exam: $examAmount, Misc: $miscAmount',
+    );
+
+    if (admissionAmount != null ||
+        monthlyAmount != null ||
+        examAmount != null ||
+        miscAmount != null) {
+      // This is a combined challan - show individual amounts
+      feeRows[0]['amount'] = monthlyAmount != null && monthlyAmount > 0
+          ? monthlyAmount.toStringAsFixed(0)
+          : '';
+      feeRows[0]['month'] = challan.month ?? '';
+      feeRows[1]['amount'] = admissionAmount != null && admissionAmount > 0
+          ? admissionAmount.toStringAsFixed(0)
+          : '';
+      feeRows[1]['month'] = challan.month ?? '';
+      feeRows[2]['amount'] = examAmount != null && examAmount > 0
+          ? examAmount.toStringAsFixed(0)
+          : '';
+      feeRows[2]['month'] = challan.month ?? '';
+      feeRows[4]['amount'] = miscAmount != null && miscAmount > 0
+          ? miscAmount.toStringAsFixed(0)
+          : '';
+      feeRows[4]['month'] = challan.month ?? '';
+    } else {
+      // Regular single-type challan
+      switch (challan.feesType.toLowerCase()) {
+        case 'admission':
+          feeRows[1]['amount'] = challan.amount.toStringAsFixed(0);
+          feeRows[1]['month'] = challan.month ?? '';
+          break;
+        case 'monthly':
+          feeRows[0]['amount'] = challan.amount.toStringAsFixed(0);
+          feeRows[0]['month'] = challan.month ?? '';
+          break;
+        case 'exam':
+          feeRows[2]['amount'] = challan.amount.toStringAsFixed(0);
+          feeRows[2]['month'] = challan.examDetails ?? '';
+          break;
+        case 'misc':
+          feeRows[4]['amount'] = challan.amount.toStringAsFixed(0);
+          feeRows[4]['month'] = challan.feeDetails ?? '';
+          break;
+        default:
+          feeRows[4]['amount'] = challan.amount.toStringAsFixed(0);
+          feeRows[4]['month'] = challan.feesType;
+      }
     }
 
     // Create TableRow for each fee row

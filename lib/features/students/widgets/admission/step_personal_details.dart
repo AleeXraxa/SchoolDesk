@@ -42,11 +42,19 @@ class _StepPersonalDetailsState extends State<StepPersonalDetails> {
                   child: CustomTextField(
                     controller: controller.rollNoController,
                     label: 'Roll No',
-                    hint: 'Enter roll number',
+                    hint: 'Auto-generated roll number',
                     icon: Icons.numbers,
                     keyboardType: TextInputType.number,
-                    validator: (value) =>
-                        controller.validateNumeric(value, 'Roll No'),
+                    readOnly: !controller
+                        .isEditMode
+                        .value, // Read-only for new admissions
+                    validator: (value) {
+                      // Skip validation for new admissions since roll number is auto-generated
+                      if (!controller.isEditMode.value) {
+                        return null;
+                      }
+                      return controller.validateNumeric(value, 'Roll No');
+                    },
                   ),
                 ),
                 SizedBox(width: 16.w),
