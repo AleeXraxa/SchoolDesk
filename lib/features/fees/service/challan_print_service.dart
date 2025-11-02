@@ -142,19 +142,19 @@ class ChallanPrintService {
 
     pdf.addPage(
       pw.Page(
-        pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.all(20),
+        pageFormat: PdfPageFormat.a4.landscape,
+        margin: const pw.EdgeInsets.all(5),
         build: (pw.Context context) {
           return pw.Container(
             child: pw.Row(
               children: [
                 // School Copy
-                schoolCopy,
+                pw.Expanded(child: schoolCopy),
                 // Dotted divider
                 pw.Container(
                   width: 1,
                   height: double.infinity,
-                  margin: const pw.EdgeInsets.symmetric(horizontal: 8),
+                  margin: const pw.EdgeInsets.symmetric(horizontal: 2),
                   child: pw.Column(
                     children: List.generate(
                       100,
@@ -168,12 +168,12 @@ class ChallanPrintService {
                   ),
                 ),
                 // Bank Copy
-                bankCopy,
+                pw.Expanded(child: bankCopy),
                 // Dotted divider
                 pw.Container(
                   width: 1,
                   height: double.infinity,
-                  margin: const pw.EdgeInsets.symmetric(horizontal: 8),
+                  margin: const pw.EdgeInsets.symmetric(horizontal: 2),
                   child: pw.Column(
                     children: List.generate(
                       100,
@@ -187,7 +187,7 @@ class ChallanPrintService {
                   ),
                 ),
                 // Student Copy
-                studentCopy,
+                pw.Expanded(child: studentCopy),
               ],
             ),
           );
@@ -288,7 +288,7 @@ class ChallanPrintService {
                         pw.Text(
                           'BRIGHT MODEL SCHOOL',
                           style: pw.TextStyle(
-                            fontSize: 9,
+                            fontSize: 12,
                             fontWeight: pw.FontWeight.bold,
                             font: _customFontBold,
                           ),
@@ -296,12 +296,12 @@ class ChallanPrintService {
                         ),
                         pw.Text(
                           'Zulfiqar Bagh Road, Ghalib Nagar, Larkano',
-                          style: const pw.TextStyle(fontSize: 5),
+                          style: const pw.TextStyle(fontSize: 8),
                           textAlign: pw.TextAlign.center,
                         ),
                         pw.Text(
                           'Ph: 074-4059330 Mob: 0301-3481610',
-                          style: const pw.TextStyle(fontSize: 5),
+                          style: const pw.TextStyle(fontSize: 8),
                           textAlign: pw.TextAlign.center,
                         ),
                       ],
@@ -347,7 +347,7 @@ class ChallanPrintService {
                         pw.Text(
                           'AL-BARAK BANK (PAKISTAN) LTD.',
                           style: pw.TextStyle(
-                            fontSize: 6,
+                            fontSize: 9,
                             fontWeight: pw.FontWeight.bold,
                             font: _customFontBold,
                           ),
@@ -355,12 +355,12 @@ class ChallanPrintService {
                         ),
                         pw.Text(
                           'Bank Square Road, Larkano',
-                          style: const pw.TextStyle(fontSize: 6),
+                          style: const pw.TextStyle(fontSize: 8),
                           textAlign: pw.TextAlign.center,
                         ),
                         pw.Text(
                           'A/C # 0102-425314-014',
-                          style: const pw.TextStyle(fontSize: 6),
+                          style: const pw.TextStyle(fontSize: 8),
                           textAlign: pw.TextAlign.center,
                         ),
                       ],
@@ -701,7 +701,7 @@ class ChallanPrintService {
           // Bank Stamp and Signature Section
           pw.Container(
             width: double.infinity,
-            height: 50,
+            height: 70,
             padding: const pw.EdgeInsets.all(6),
             decoration: pw.BoxDecoration(
               border: pw.Border.all(color: PdfColors.black, width: 0.5),
