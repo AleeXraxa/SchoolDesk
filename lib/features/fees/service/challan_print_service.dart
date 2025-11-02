@@ -207,16 +207,29 @@ class ChallanPrintService {
     DateTime voucherValidUpto,
   ) async {
     // Load school logo - handle missing logo gracefully
-    pw.MemoryImage? logoImage;
+    pw.MemoryImage? schoolLogoImage;
+    pw.MemoryImage? bankLogoImage;
+
     try {
-      final logoData = await rootBundle.load('assets/images/Logo.jpeg');
-      if (logoData.buffer.lengthInBytes > 0) {
-        logoImage = pw.MemoryImage(logoData.buffer.asUint8List());
+      final schoolLogoData = await rootBundle.load('assets/images/Logo.jpeg');
+      if (schoolLogoData.buffer.lengthInBytes > 0) {
+        schoolLogoImage = pw.MemoryImage(schoolLogoData.buffer.asUint8List());
       }
     } catch (e) {
-      print('Logo loading error: $e');
-      // Logo not found or empty, use placeholder
-      logoImage = null;
+      print('School logo loading error: $e');
+      schoolLogoImage = null;
+    }
+
+    try {
+      final bankLogoData = await rootBundle.load(
+        'assets/images/bank logo.jpeg',
+      );
+      if (bankLogoData.buffer.lengthInBytes > 0) {
+        bankLogoImage = pw.MemoryImage(bankLogoData.buffer.asUint8List());
+      }
+    } catch (e) {
+      print('Bank logo loading error: $e');
+      bankLogoImage = null;
     }
 
     return pw.Container(
@@ -226,60 +239,124 @@ class ChallanPrintService {
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
           // Header with logo and school info
-          pw.Row(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
+          pw.Column(
             children: [
-              // Logo - taller to cover title and address height
-              pw.Container(
-                width: 35,
-                height:
-                    45, // Increased height to cover both title and address lines
-                child: logoImage != null
-                    ? pw.Image(logoImage, fit: pw.BoxFit.contain)
-                    : pw.Container(
-                        color: PdfColors.blue,
-                        child: pw.Center(
-                          child: pw.Text(
-                            'LOGO',
-                            style: pw.TextStyle(
-                              color: PdfColors.white,
-                              fontSize: 6,
-                              fontWeight: pw.FontWeight.bold,
+              pw.Row(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  // Logo - taller to cover title and address height
+                  pw.Container(
+                    width: 35,
+                    height:
+                        45, // Increased height to cover both title and address lines
+                    child: schoolLogoImage != null
+                        ? pw.Image(schoolLogoImage, fit: pw.BoxFit.contain)
+                        : pw.Container(
+                            color: PdfColors.blue,
+                            child: pw.Center(
+                              child: pw.Text(
+                                'LOGO',
+                                style: pw.TextStyle(
+                                  color: PdfColors.white,
+                                  fontSize: 6,
+                                  fontWeight: pw.FontWeight.bold,
+                                ),
+                              ),
                             ),
                           ),
+                  ),
+                  pw.SizedBox(width: 8),
+                  // School info
+                  pw.Expanded(
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.center,
+                      children: [
+                        pw.Text(
+                          'BRIGHT MODEL SCHOOL',
+                          style: pw.TextStyle(
+                            fontSize: 9,
+                            fontWeight: pw.FontWeight.bold,
+                            font: _customFontBold,
+                          ),
+                          textAlign: pw.TextAlign.center,
                         ),
-                      ),
+                        pw.Text(
+                          'Zulfiqar Bagh Road, Ghalib Nagar, Larkano',
+                          style: const pw.TextStyle(fontSize: 5),
+                          textAlign: pw.TextAlign.center,
+                        ),
+                        pw.Text(
+                          'Ph: 074-4059330 Mob: 0301-3481610',
+                          style: const pw.TextStyle(fontSize: 5),
+                          textAlign: pw.TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              pw.SizedBox(width: 8),
-              // School info
-              pw.Expanded(
-                child: pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.center,
-                  children: [
-                    pw.Text(
-                      'BRIGHT MODEL SCHOOL',
-                      style: pw.TextStyle(
-                        fontSize: 9,
-                        fontWeight: pw.FontWeight.bold,
-                        font: _customFontBold,
-                      ),
-                      textAlign: pw.TextAlign.center,
+              pw.SizedBox(height: 4),
+              // Full-width horizontal divider line
+              pw.Container(height: 0.5, color: PdfColors.black),
+              pw.SizedBox(height: 6),
+              // Bank details section
+              pw.Row(
+                crossAxisAlignment: pw.CrossAxisAlignment.center,
+                children: [
+                  // Bank logo
+                  pw.Container(
+                    width: 35,
+                    height: 45,
+                    child: bankLogoImage != null
+                        ? pw.Image(bankLogoImage, fit: pw.BoxFit.contain)
+                        : pw.Container(
+                            color: PdfColors.blue,
+                            child: pw.Center(
+                              child: pw.Text(
+                                'BANK',
+                                style: pw.TextStyle(
+                                  color: PdfColors.white,
+                                  fontSize: 6,
+                                  fontWeight: pw.FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                  ),
+                  pw.SizedBox(width: 6),
+                  // Bank info
+                  pw.Expanded(
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.center,
+                      mainAxisAlignment: pw.MainAxisAlignment.center,
+                      children: [
+                        pw.Text(
+                          'AL-BARAK BANK (PAKISTAN) LTD.',
+                          style: pw.TextStyle(
+                            fontSize: 6,
+                            fontWeight: pw.FontWeight.bold,
+                            font: _customFontBold,
+                          ),
+                          textAlign: pw.TextAlign.center,
+                        ),
+                        pw.Text(
+                          'Bank Square Road, Larkano',
+                          style: const pw.TextStyle(fontSize: 6),
+                          textAlign: pw.TextAlign.center,
+                        ),
+                        pw.Text(
+                          'A/C # 0102-425314-014',
+                          style: const pw.TextStyle(fontSize: 6),
+                          textAlign: pw.TextAlign.center,
+                        ),
+                      ],
                     ),
-                    pw.Text(
-                      'Zulfiqar Bagh Road, Ghalib Nagar, Larkano',
-                      style: const pw.TextStyle(fontSize: 5),
-                      textAlign: pw.TextAlign.center,
-                    ),
-                    pw.Text(
-                      'Ph: 074-4059330 Mob: 0301-3481610',
-                      style: const pw.TextStyle(fontSize: 5),
-                      textAlign: pw.TextAlign.center,
-                    ),
-                    pw.SizedBox(height: 2),
-                    pw.Container(height: 1, color: PdfColors.black),
-                  ],
-                ),
+                  ),
+                ],
               ),
+              pw.SizedBox(height: 4),
+              // Bank section divider
+              pw.Container(height: 0.5, color: PdfColors.black),
             ],
           ),
 
