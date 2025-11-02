@@ -195,6 +195,60 @@ class ChallanService {
     }
   }
 
+  // Fetch challan with student details
+  static Future<Map<String, dynamic>?> fetchChallanWithStudent(
+    String challanId,
+  ) async {
+    try {
+      final db = await DatabaseService.database;
+      final List<Map<String, dynamic>> maps = await db.rawQuery(
+        '''
+        SELECT challans.*, students.*
+        FROM challans
+        LEFT JOIN students ON challans.student_id = students.id
+        WHERE challans.challan_id = ?
+        LIMIT 1
+      ''',
+        [challanId],
+      );
+
+      if (maps.isNotEmpty) {
+        final map = maps.first;
+        // Convert student data to StudentModel
+        final studentData = {
+          'id': map['id'],
+          'roll_no': map['roll_no'],
+          'gr_no': map['gr_no'],
+          'student_name': map['student_name'],
+          'father_name': map['father_name'],
+          'caste': map['caste'],
+          'place_of_birth': map['place_of_birth'],
+          'dob_figures': map['dob_figures'],
+          'dob_words': map['dob_words'],
+          'gender': map['gender'],
+          'religion': map['religion'],
+          'father_contact': map['father_contact'],
+          'mother_contact': map['mother_contact'],
+          'address': map['address'],
+          'admission_date': map['admission_date'],
+          'class_id': map['class_id'],
+          'class_name': map['class_name'],
+          'section': map['section'],
+          'admission_fees': map['admission_fees'],
+          'monthly_fees': map['monthly_fees'],
+          'status': map['status'],
+          'is_monthly_fee_synced': map['is_monthly_fee_synced'],
+        };
+
+        return {...map, 'student': studentData};
+      }
+      return null;
+    } catch (e) {
+      print('Error fetching challan with student: $e');
+      return null;
+    }
+  }
+
   // Search challans by student name or roll number
   static Future<List<ChallanModel>> searchChallans(
     String query, {

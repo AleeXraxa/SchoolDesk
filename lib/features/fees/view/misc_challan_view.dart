@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
 import '../controller/challan_controller.dart';
+import '../service/challan_print_service.dart';
 
 class MiscChallanView extends GetView<ChallanController> {
   const MiscChallanView({super.key});
@@ -372,6 +373,17 @@ class MiscChallanView extends GetView<ChallanController> {
                   padding: EdgeInsets.all(6.w),
                 ),
               ),
+              SizedBox(width: 4.w),
+              IconButton(
+                onPressed: () => _printChallan(challan, context),
+                icon: Icon(Icons.print, size: 18.sp),
+                tooltip: 'Print Challan',
+                color: Colors.green[600],
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.green[50],
+                  padding: EdgeInsets.all(6.w),
+                ),
+              ),
             ],
           ),
         ),
@@ -529,6 +541,20 @@ class MiscChallanView extends GetView<ChallanController> {
       ),
       barrierDismissible: true,
     );
+  }
+
+  void _printChallan(dynamic challan, BuildContext context) async {
+    try {
+      await ChallanPrintService.printChallan(challan.challanId, context);
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'Failed to print challan: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red[100],
+        colorText: Colors.red[800],
+      );
+    }
   }
 
   Widget _buildDetailRow(String label, String value) {
