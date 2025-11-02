@@ -238,6 +238,20 @@ class ChallanPrintService {
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
+          // Copy Type at the top (centered)
+          pw.Container(
+            alignment: pw.Alignment.center,
+            margin: const pw.EdgeInsets.only(bottom: 8),
+            child: pw.Text(
+              copyType,
+              style: pw.TextStyle(
+                fontSize: 5,
+                fontWeight: pw.FontWeight.bold,
+                font: _customFontBold,
+              ),
+            ),
+          ),
+
           // Header with logo and school info
           pw.Column(
             children: [
@@ -297,7 +311,7 @@ class ChallanPrintService {
               ),
               pw.SizedBox(height: 4),
               // Full-width horizontal divider line
-              pw.Container(height: 0.5, color: PdfColors.black),
+              pw.Container(height: 0.3, color: PdfColors.black),
               pw.SizedBox(height: 6),
               // Bank details section
               pw.Row(
@@ -354,24 +368,9 @@ class ChallanPrintService {
                   ),
                 ],
               ),
-              pw.SizedBox(height: 4),
               // Bank section divider
-              pw.Container(height: 0.5, color: PdfColors.black),
+              pw.Container(height: 0.3, color: PdfColors.black),
             ],
-          ),
-
-          // Copy Type (right aligned)
-          pw.Container(
-            alignment: pw.Alignment.centerRight,
-            margin: const pw.EdgeInsets.only(top: 8),
-            child: pw.Text(
-              copyType,
-              style: pw.TextStyle(
-                fontSize: 10,
-                fontWeight: pw.FontWeight.bold,
-                font: _customFontBold,
-              ),
-            ),
           ),
 
           pw.SizedBox(height: 12),
@@ -379,61 +378,148 @@ class ChallanPrintService {
           // Student Info Block
           pw.Container(
             padding: const pw.EdgeInsets.all(6),
-            decoration: pw.BoxDecoration(
-              border: pw.Border.all(color: PdfColors.grey300, width: 0.5),
-            ),
             child: pw.Column(
               children: [
+                // First row: A/C No and GR# on same line
                 pw.Row(
                   children: [
                     pw.Expanded(
-                      child: pw.Text(
-                        'A/C No: ${student?.grNo ?? challan.studentId}',
-                        style: const pw.TextStyle(fontSize: 9),
+                      flex: 2,
+                      child: pw.RichText(
+                        text: pw.TextSpan(
+                          children: [
+                            pw.TextSpan(
+                              text: 'Roll No: ',
+                              style: pw.TextStyle(
+                                fontSize: 9,
+                                fontWeight: pw.FontWeight.bold,
+                              ),
+                            ),
+                            pw.TextSpan(
+                              text: '${student?.grNo ?? challan.studentId}',
+                              style: const pw.TextStyle(fontSize: 9),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                     pw.Expanded(
-                      child: pw.Text(
-                        'GR#: ${student?.grNo ?? challan.studentId}',
-                        style: const pw.TextStyle(fontSize: 9),
+                      flex: 2,
+                      child: pw.RichText(
+                        text: pw.TextSpan(
+                          children: [
+                            pw.TextSpan(
+                              text: 'GR#: ',
+                              style: pw.TextStyle(
+                                fontSize: 9,
+                                fontWeight: pw.FontWeight.bold,
+                              ),
+                            ),
+                            pw.TextSpan(
+                              text: '${student?.grNo ?? challan.studentId}',
+                              style: const pw.TextStyle(fontSize: 9),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],
                 ),
+                pw.Container(height: 0.2, color: PdfColors.black),
                 pw.SizedBox(height: 4),
-                pw.Row(
-                  children: [
-                    pw.Expanded(
-                      child: pw.Text(
-                        'Name: ${student?.studentName ?? challan.studentName ?? 'N/A'}',
-                        style: const pw.TextStyle(fontSize: 9),
-                      ),
+                // Second row: Name on full width
+                pw.Container(
+                  alignment: pw.Alignment.centerLeft,
+                  child: pw.RichText(
+                    text: pw.TextSpan(
+                      children: [
+                        pw.TextSpan(
+                          text: 'Name: ',
+                          style: pw.TextStyle(
+                            fontSize: 9,
+                            fontWeight: pw.FontWeight.bold,
+                          ),
+                        ),
+                        pw.TextSpan(
+                          text:
+                              '${student?.studentName ?? challan.studentName ?? 'N/A'}',
+                          style: const pw.TextStyle(fontSize: 9),
+                        ),
+                      ],
                     ),
-                    pw.Expanded(
-                      child: pw.Text(
-                        'Father\'s Name: ${student?.fatherName ?? 'N/A'}',
-                        style: const pw.TextStyle(fontSize: 9),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
+                pw.Container(height: 0.2, color: PdfColors.black),
                 pw.SizedBox(height: 4),
+                // Third row: Father's Name on full width
+                pw.Container(
+                  alignment: pw.Alignment.centerLeft,
+                  child: pw.RichText(
+                    text: pw.TextSpan(
+                      children: [
+                        pw.TextSpan(
+                          text: 'Father\'s Name: ',
+                          style: pw.TextStyle(
+                            fontSize: 9,
+                            fontWeight: pw.FontWeight.bold,
+                          ),
+                        ),
+                        pw.TextSpan(
+                          text: '${student?.fatherName ?? 'N/A'}',
+                          style: const pw.TextStyle(fontSize: 9),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                pw.Container(height: 0.2, color: PdfColors.black),
+                pw.SizedBox(height: 4),
+                // Fourth row: Class and Section on same line
                 pw.Row(
                   children: [
                     pw.Expanded(
-                      child: pw.Text(
-                        'Class: ${student?.className ?? 'N/A'}',
-                        style: const pw.TextStyle(fontSize: 9),
+                      flex: 2,
+                      child: pw.RichText(
+                        text: pw.TextSpan(
+                          children: [
+                            pw.TextSpan(
+                              text: 'Class: ',
+                              style: pw.TextStyle(
+                                fontSize: 9,
+                                fontWeight: pw.FontWeight.bold,
+                              ),
+                            ),
+                            pw.TextSpan(
+                              text: '${student?.className ?? 'N/A'}',
+                              style: const pw.TextStyle(fontSize: 9),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                     pw.Expanded(
-                      child: pw.Text(
-                        'Section: ${student?.section ?? 'N/A'}',
-                        style: const pw.TextStyle(fontSize: 9),
+                      flex: 2,
+                      child: pw.RichText(
+                        text: pw.TextSpan(
+                          children: [
+                            pw.TextSpan(
+                              text: 'Section: ',
+                              style: pw.TextStyle(
+                                fontSize: 9,
+                                fontWeight: pw.FontWeight.bold,
+                              ),
+                            ),
+                            pw.TextSpan(
+                              text: '${student?.section ?? 'N/A'}',
+                              style: const pw.TextStyle(fontSize: 9),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],
                 ),
+                pw.Container(height: 0.2, color: PdfColors.black),
               ],
             ),
           ),
