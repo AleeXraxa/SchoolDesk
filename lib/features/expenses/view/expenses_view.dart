@@ -403,71 +403,79 @@ class ExpensesView extends GetView<ExpensesController> {
                         ),
                       ),
                     )
-                  : Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: data.asMap().entries.map((entry) {
-                        final index = entry.key;
-                        final item = entry.value;
-                        final value = item['value'] as double;
-                        final height = maxValue > 0
-                            ? (value / maxValue) * 150.h
-                            : 0.0;
-                        final colors = [
-                          Colors.blue,
-                          Colors.green,
-                          Colors.orange,
-                          Colors.red,
-                          Colors.purple,
-                          Colors.teal,
-                          Colors.pink,
-                          Colors.indigo,
-                          Colors.amber,
-                          Colors.cyan,
-                        ];
-                        final barColor = colors[index % colors.length];
-                        return Expanded(
-                          child: Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 2.w),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                Text(
-                                  'PKR ${value.toStringAsFixed(0)}',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 10.sp,
-                                    color: Colors.black87,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-                                SizedBox(height: 8.h),
-                                Container(
-                                  width: double.infinity,
-                                  height: height,
-                                  decoration: BoxDecoration(
-                                    color: barColor.withOpacity(0.8),
-                                    borderRadius: BorderRadius.only(
-                                      topLeft: Radius.circular(4.r),
-                                      topRight: Radius.circular(4.r),
+                  : Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 16.w,
+                        vertical: 8.h,
+                      ),
+                      child: Column(
+                        children: [
+                          // Value labels row
+                          SizedBox(
+                            height: 25.h,
+                            child: Row(
+                              children: data.map((item) {
+                                final value = item['value'] as double;
+                                return Expanded(
+                                  child: Container(
+                                    alignment: Alignment.center,
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 2.w,
+                                    ),
+                                    child: Text(
+                                      'PKR ${value.toStringAsFixed(0)}',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 8.sp,
+                                        color: Colors.black87,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
-                                ),
-                                SizedBox(height: 8.h),
-                                Text(
-                                  item['label'] as String,
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 10.sp,
-                                    color: Colors.grey[600],
-                                  ),
-                                  textAlign: TextAlign.center,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
+                                );
+                              }).toList(),
                             ),
                           ),
-                        );
-                      }).toList(),
+                          SizedBox(height: 8.h),
+                          // Chart area
+                          SizedBox(
+                            height: 120.h,
+                            child: CustomPaint(
+                              painter: LineChartPainter(data, maxValue),
+                              child: Container(),
+                            ),
+                          ),
+                          SizedBox(height: 8.h),
+                          // X-axis labels row
+                          SizedBox(
+                            height: 35.h,
+                            child: Row(
+                              children: data.map((item) {
+                                return Expanded(
+                                  child: Container(
+                                    alignment: Alignment.center,
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 2.w,
+                                    ),
+                                    child: Text(
+                                      item['label'] as String,
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 9.sp,
+                                        color: Colors.grey[600],
+                                      ),
+                                      textAlign: TextAlign.center,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
             ),
           ],
@@ -960,6 +968,82 @@ class ExpensesView extends GetView<ExpensesController> {
       ),
     );
   }
+}
+
+class LineChartPainter extends CustomPainter {
+  final List<Map<String, dynamic>> data;
+  final double maxValue;
+
+  LineChartPainter(this.data, this.maxValue);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (data.isEmpty || maxValue == 0) return;
+
+    final paint = Paint()
+      ..color = Colors.blue
+      ..strokeWidth = 3
+      ..style = PaintingStyle.stroke;
+
+    final fillPaint = Paint()
+      ..color = Colors.blue.withOpacity(0.1)
+      ..style = PaintingStyle.fill;
+
+    final pointPaint = Paint()
+      ..color = Colors.blue
+      ..style = PaintingStyle.fill;
+
+    final gridPaint = Paint()
+      ..color = Colors.grey.withOpacity(0.2)
+      ..strokeWidth = 1;
+
+    // Draw grid lines
+    for (int i = 0; i <= 4; i++) {
+      final y = size.height * (i / 4);
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
+    }
+
+    final path = Path();
+    final fillPath = Path();
+
+    for (int i = 0; i < data.length; i++) {
+      final value = data[i]['value'] as double;
+      final x = (i / (data.length - 1)) * size.width;
+      final y = size.height - (value / maxValue) * size.height;
+
+      if (i == 0) {
+        path.moveTo(x, y);
+        fillPath.moveTo(x, size.height);
+        fillPath.lineTo(x, y);
+      } else {
+        path.lineTo(x, y);
+        fillPath.lineTo(x, y);
+      }
+
+      // Draw data point
+      canvas.drawCircle(Offset(x, y), 4, pointPaint);
+      canvas.drawCircle(
+        Offset(x, y),
+        6,
+        Paint()
+          ..color = Colors.white
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2,
+      );
+    }
+
+    fillPath.lineTo(size.width, size.height);
+    fillPath.close();
+
+    // Draw fill area
+    canvas.drawPath(fillPath, fillPaint);
+
+    // Draw line
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }
 
 class AddExpenseDialog extends StatefulWidget {

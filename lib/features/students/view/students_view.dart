@@ -57,54 +57,6 @@ class StudentsView extends GetView<StudentsController> {
                     color: Colors.black87,
                   ),
                 ),
-                // Bulk Insert Button
-                TweenAnimationBuilder<double>(
-                  tween: Tween(begin: 0.0, end: 1.0),
-                  duration: const Duration(milliseconds: 800),
-                  builder: (context, scale, child) {
-                    return Transform.scale(
-                      scale: scale,
-                      child: ElevatedButton.icon(
-                        onPressed: () => controller.bulkInsertSampleStudents(),
-                        icon: Icon(Icons.add_circle, size: 18.sp),
-                        label: Text(
-                          'Add 100 Sample Students',
-                          style: GoogleFonts.poppins(
-                            fontSize: 14.sp,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        style:
-                            ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green[600],
-                              foregroundColor: Colors.white,
-                              elevation: 2,
-                              padding: EdgeInsets.symmetric(
-                                horizontal: 28.w,
-                                vertical: 14.h,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12.r),
-                              ),
-                              shadowColor: Colors.green[200],
-                            ).copyWith(
-                              elevation:
-                                  MaterialStateProperty.resolveWith<double>((
-                                    Set<MaterialState> states,
-                                  ) {
-                                    if (states.contains(
-                                      MaterialState.hovered,
-                                    )) {
-                                      return 4;
-                                    }
-                                    return 2;
-                                  }),
-                            ),
-                      ),
-                    );
-                  },
-                ),
-                SizedBox(width: 16.w),
                 // New Admission Button
                 TweenAnimationBuilder<double>(
                   tween: Tween(begin: 0.0, end: 1.0),

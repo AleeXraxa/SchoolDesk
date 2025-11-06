@@ -9,6 +9,7 @@ import 'package:printing/printing.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../widgets/result_dialog.dart';
 import '../../../widgets/footer_widget.dart';
+import '../../../widgets/birthday_notifications_dialog.dart';
 import '../controller/dashboard_controller.dart';
 import '../widgets/sidebar/sidebar_widget.dart';
 import '../widgets/sidebar/sidebar_controller.dart';
@@ -183,6 +184,39 @@ class DashboardView extends GetView<DashboardController> {
                               borderRadius: BorderRadius.circular(12.r),
                             ),
                           ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                SizedBox(width: 12.w),
+
+                // Bell Icon Button
+                StatefulBuilder(
+                  builder: (context, setState) {
+                    double _scale = 1.0;
+                    return MouseRegion(
+                      onEnter: (_) => setState(() => _scale = 1.05),
+                      onExit: (_) => setState(() => _scale = 1.0),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        transform: Matrix4.identity()..scale(_scale),
+                        child: IconButton(
+                          onPressed: () => Get.dialog(
+                            const BirthdayNotificationsDialog(),
+                            barrierDismissible: true,
+                          ),
+                          icon: Icon(Icons.notifications_none, size: 24.sp),
+                          style: IconButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: AppColors.primary,
+                            elevation: 1,
+                            padding: EdgeInsets.all(12.w),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12.r),
+                            ),
+                          ),
+                          tooltip: 'Birthday Notifications',
                         ),
                       ),
                     );

@@ -248,4 +248,63 @@ class StudentService {
       rethrow;
     }
   }
+
+  static Future<List<Map<String, dynamic>>> getUpcomingBirthdays({
+    int daysAhead = 15,
+  }) async {
+    try {
+      final db = await DatabaseService.database;
+      final now = DateTime.now();
+      final futureDate = now.add(Duration(days: daysAhead));
+
+      // Get current year birthdays within the next 15 days
+      final currentYearBirthdays = await db.rawQuery(
+        '''
+        SELECT student_name, dob_figures, class_name, section
+        FROM students
+        WHERE status = 'Active'
+        AND strftime('%m-%d', dob_figures) BETWEEN strftime('%m-%d', ?) AND strftime('%m-%d', ?)
+        ORDER BY strftime('%m-%d', dob_figures)
+      ''',
+        [now.toIso8601String(), futureDate.toIso8601String()],
+      );
+
+      final List<Map<String, dynamic>> upcomingBirthdays = [];
+
+      for (final row in currentYearBirthdays) {
+        final dobString = row['dob_figures'] as String;
+        final dob = DateTime.parse(dobString);
+
+        // Calculate this year's birthday
+        final thisYearBirthday = DateTime(now.year, dob.month, dob.day);
+
+        // If this year's birthday has passed, calculate next year's
+        final birthdayDate = thisYearBirthday.isBefore(now)
+            ? DateTime(now.year + 1, dob.month, dob.day)
+            : thisYearBirthday;
+
+        final daysUntil = birthdayDate.difference(now).inDays;
+
+        if (daysUntil <= daysAhead && daysUntil >= 0) {
+          upcomingBirthdays.add({
+            'name': row['student_name'],
+            'dob': dob,
+            'class': '${row['class_name']} - ${row['section']}',
+            'daysUntil': daysUntil,
+          });
+        }
+      }
+
+      // Sort by days until birthday
+      upcomingBirthdays.sort(
+        (a, b) => (a['daysUntil'] as int).compareTo(b['daysUntil'] as int),
+      );
+
+      return upcomingBirthdays;
+    } catch (e, stackTrace) {
+      print('StudentService: Error getting upcoming birthdays: $e');
+      print('StudentService: Stack trace: $stackTrace');
+      rethrow;
+    }
+  }
 }
