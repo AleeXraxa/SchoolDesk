@@ -65,8 +65,6 @@ class _StepPersonalDetailsState extends State<StepPersonalDetails> {
                     hint: 'Enter GR number',
                     icon: Icons.confirmation_number,
                     keyboardType: TextInputType.number,
-                    validator: (value) =>
-                        controller.validateNumeric(value, 'GR No'),
                   ),
                 ),
               ],
@@ -110,8 +108,6 @@ class _StepPersonalDetailsState extends State<StepPersonalDetails> {
               label: 'Place of Birth',
               hint: 'Enter place of birth',
               icon: Icons.location_on,
-              validator: (value) =>
-                  controller.validateRequired(value, 'Place of birth'),
             ),
             SizedBox(height: 16.h),
 
@@ -235,7 +231,6 @@ class _StepPersonalDetailsState extends State<StepPersonalDetails> {
                     hint: '+92-300-1234567',
                     icon: Icons.phone,
                     keyboardType: TextInputType.phone,
-                    validator: controller.validatePhone,
                   ),
                 ),
                 SizedBox(width: 16.w),
@@ -259,8 +254,6 @@ class _StepPersonalDetailsState extends State<StepPersonalDetails> {
               hint: 'Enter complete address',
               icon: Icons.home,
               maxLines: 3,
-              validator: (value) =>
-                  controller.validateRequired(value, 'Address'),
             ),
           ],
         ),

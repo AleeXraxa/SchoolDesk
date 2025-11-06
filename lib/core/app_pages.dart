@@ -19,6 +19,8 @@ import '../features/fees/view/exam_fees_view.dart';
 import '../features/fees/controller/exam_fees_controller.dart';
 import '../features/fees/view/misc_fees_view.dart';
 import '../features/fees/controller/misc_fees_controller.dart';
+import '../features/users/view/users_view.dart';
+import '../features/users/controller/users_controller.dart';
 
 class AppPages {
   static final pages = [
@@ -31,7 +33,7 @@ class AppPages {
     ),
     GetPage(
       name: AppRoutes.dashboard,
-      page: () => const DashboardView(),
+      page: () => DashboardView(),
       binding: BindingsBuilder(() {
         Get.lazyPut<DashboardController>(() => DashboardController());
       }),
@@ -90,6 +92,13 @@ class AppPages {
       page: () => const MiscFeesView(),
       binding: BindingsBuilder(() {
         Get.lazyPut<MiscFeesController>(() => MiscFeesController());
+      }),
+    ),
+    GetPage(
+      name: AppRoutes.users,
+      page: () => const UsersView(),
+      binding: BindingsBuilder(() {
+        Get.lazyPut<UsersController>(() => UsersController());
       }),
     ),
     // Add more pages here as needed

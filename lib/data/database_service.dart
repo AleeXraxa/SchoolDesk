@@ -42,7 +42,7 @@ class DatabaseService {
       final db = await databaseFactory.openDatabase(
         dbPath,
         options: OpenDatabaseOptions(
-          version: 14,
+          version: 16,
           onCreate: _onCreate,
           onUpgrade: _onUpgrade,
           onOpen: _onOpen,
@@ -547,6 +547,39 @@ class DatabaseService {
         print('DatabaseService: Created multiple_challans table');
       }
 
+      if (oldVersion < 15) {
+        print(
+          'DatabaseService: Adding created_at column to students table for version 15',
+        );
+
+        // Add created_at column to students table
+        try {
+          await db.execute('ALTER TABLE students ADD COLUMN created_at TEXT');
+          print('DatabaseService: Added created_at column to students table');
+        } catch (e) {
+          print('DatabaseService: created_at column might already exist: $e');
+        }
+      }
+
+      if (oldVersion < 16) {
+        print('DatabaseService: Creating expenses table for version 16');
+
+        // Create expenses table
+        await db.execute('''
+          CREATE TABLE expenses (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            category TEXT NOT NULL,
+            description TEXT NOT NULL,
+            amount REAL NOT NULL,
+            date TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'Paid',
+            created_at TEXT,
+            updated_at TEXT
+          )
+        ''');
+        print('DatabaseService: Expenses table created');
+      }
+
       print('DatabaseService: Database upgrade completed');
     } catch (e, stackTrace) {
       print('DatabaseService: Error during database upgrade: $e');
@@ -753,6 +786,28 @@ class DatabaseService {
           )
         ''');
         print('DatabaseService: Multiple challans table created');
+      }
+
+      // Check if expenses table exists, create if not
+      final expensesTables = await db.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='expenses'",
+      );
+
+      if (expensesTables.isEmpty) {
+        print('DatabaseService: Creating expenses table...');
+        await db.execute('''
+          CREATE TABLE expenses (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            category TEXT NOT NULL,
+            description TEXT NOT NULL,
+            amount REAL NOT NULL,
+            date TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'Paid',
+            created_at TEXT,
+            updated_at TEXT
+          )
+        ''');
+        print('DatabaseService: Expenses table created');
       }
     } catch (e, stackTrace) {
       print('DatabaseService: Error during database open: $e');

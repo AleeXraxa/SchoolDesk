@@ -21,6 +21,7 @@ class StudentModel {
   final double monthlyFees;
   final String status;
   final bool isMonthlyFeeSynced;
+  final DateTime? createdAt;
 
   StudentModel({
     this.id,
@@ -45,6 +46,7 @@ class StudentModel {
     required this.monthlyFees,
     this.status = 'Active',
     this.isMonthlyFeeSynced = false,
+    this.createdAt,
   });
 
   Map<String, dynamic> toJson() {
@@ -71,6 +73,7 @@ class StudentModel {
       'monthly_fees': monthlyFees,
       'status': status,
       'is_monthly_fee_synced': isMonthlyFeeSynced ? 1 : 0,
+      'created_at': createdAt?.toIso8601String(),
     };
   }
 
@@ -98,6 +101,9 @@ class StudentModel {
       monthlyFees: json['monthly_fees'].toDouble(),
       status: json['status'],
       isMonthlyFeeSynced: (json['is_monthly_fee_synced'] as int?) == 1,
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'])
+          : null,
     );
   }
 
@@ -124,6 +130,7 @@ class StudentModel {
     double? monthlyFees,
     String? status,
     bool? isMonthlyFeeSynced,
+    DateTime? createdAt,
   }) {
     return StudentModel(
       id: id ?? this.id,
@@ -148,6 +155,7 @@ class StudentModel {
       monthlyFees: monthlyFees ?? this.monthlyFees,
       status: status ?? this.status,
       isMonthlyFeeSynced: isMonthlyFeeSynced ?? this.isMonthlyFeeSynced,
+      createdAt: createdAt ?? this.createdAt,
     );
   }
 }

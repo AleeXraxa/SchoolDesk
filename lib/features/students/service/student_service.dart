@@ -9,11 +9,21 @@ class StudentService {
         'StudentService: Adding student: ${studentModel.studentName}, Roll No: ${studentModel.rollNo}',
       );
       final db = await DatabaseService.database;
-      final id = await db.insert('students', studentModel.toJson());
+
+      // Create student data with created_at timestamp
+      final studentData = {
+        ...studentModel.toJson(),
+        'created_at': DateTime.now().toIso8601String(),
+      };
+
+      final id = await db.insert('students', studentData);
       print('StudentService: Successfully added student with ID: $id');
 
-      // Create a student model with the ID for auto-generation
-      final studentWithId = studentModel.copyWith(id: id);
+      // Create a student model with the ID and created_at for auto-generation
+      final studentWithId = studentModel.copyWith(
+        id: id,
+        createdAt: DateTime.now(),
+      );
 
       // Auto-generate monthly fees for the new student if applicable
       try {
@@ -141,6 +151,37 @@ class StudentService {
     }
   }
 
+  static Future<String> getNextGrNumber() async {
+    try {
+      final db = await DatabaseService.database;
+      final result = await db.query('students', columns: ['gr_no']);
+      print(
+        'StudentService: Found ${result.length} existing students for GR number generation',
+      );
+
+      int maxNumber = 0;
+      for (var row in result) {
+        String? grNo = row['gr_no'] as String?;
+        if (grNo != null && grNo.isNotEmpty) {
+          print('StudentService: Checking GR number: $grNo');
+          int? num = int.tryParse(grNo);
+          if (num != null && num > maxNumber) {
+            maxNumber = num;
+          }
+        }
+      }
+
+      int nextNumber = maxNumber + 1;
+      String generatedGrNo = nextNumber.toString().padLeft(6, '0');
+      print('StudentService: Generated next GR number: $generatedGrNo');
+      return generatedGrNo;
+    } catch (e, stackTrace) {
+      print('StudentService: Error generating next GR number: $e');
+      print('StudentService: Stack trace: $stackTrace');
+      rethrow;
+    }
+  }
+
   static Future<void> bulkInsertStudents(List<StudentModel> students) async {
     try {
       print(
@@ -161,6 +202,48 @@ class StudentService {
       );
     } catch (e, stackTrace) {
       print('StudentService: Error bulk inserting students: $e');
+      print('StudentService: Stack trace: $stackTrace');
+      rethrow;
+    }
+  }
+
+  Future<int> getStudentCount() async {
+    try {
+      final db = await DatabaseService.database;
+      final result = await db.rawQuery(
+        'SELECT COUNT(*) as count FROM students',
+      );
+      return result.isNotEmpty ? result.first['count'] as int : 0;
+    } catch (e, stackTrace) {
+      print('StudentService: Error getting student count: $e');
+      print('StudentService: Stack trace: $stackTrace');
+      rethrow;
+    }
+  }
+
+  static Future<int> getAdmissionsThisMonth() async {
+    try {
+      final now = DateTime.now();
+      final startOfMonth = DateTime(now.year, now.month, 1);
+      final endOfMonth = DateTime(
+        now.year,
+        now.month + 1,
+        1,
+      ).subtract(const Duration(days: 1));
+
+      final db = await DatabaseService.database;
+      final result = await db.query(
+        'students',
+        where: 'created_at >= ? AND created_at <= ?',
+        whereArgs: [
+          startOfMonth.toIso8601String(),
+          endOfMonth.toIso8601String(),
+        ],
+      );
+
+      return result.length;
+    } catch (e, stackTrace) {
+      print('StudentService: Error getting admissions this month: $e');
       print('StudentService: Stack trace: $stackTrace');
       rethrow;
     }

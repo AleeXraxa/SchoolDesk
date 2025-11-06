@@ -746,4 +746,32 @@ class MonthlyFeesService {
     ];
     return months[month - 1];
   }
+
+  static Future<int> getMonthlyFeesPendingThisMonth() async {
+    try {
+      final db = await DatabaseService.database;
+      final result = await db.rawQuery(
+        'SELECT COUNT(*) as count FROM monthly_fees WHERE status IN (\'Pending\', \'Partial\')',
+      );
+      return result.isNotEmpty ? result.first['count'] as int : 0;
+    } catch (e, stackTrace) {
+      print('MonthlyFeesService: Error getting monthly fees pending: $e');
+      print('MonthlyFeesService: Stack trace: $stackTrace');
+      rethrow;
+    }
+  }
+
+  static Future<int> getMonthlyFeesPaidThisMonth() async {
+    try {
+      final db = await DatabaseService.database;
+      final result = await db.rawQuery(
+        'SELECT COUNT(*) as count FROM monthly_fees WHERE status = \'Paid\'',
+      );
+      return result.isNotEmpty ? result.first['count'] as int : 0;
+    } catch (e, stackTrace) {
+      print('MonthlyFeesService: Error getting monthly fees paid: $e');
+      print('MonthlyFeesService: Stack trace: $stackTrace');
+      rethrow;
+    }
+  }
 }
