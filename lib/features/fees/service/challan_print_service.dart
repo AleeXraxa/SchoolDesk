@@ -18,8 +18,10 @@ final pw.Font _customFontBold = pw.Font.helveticaBold();
 class ChallanPrintService {
   static Future<void> printChallan(
     String challanId,
-    BuildContext context,
-  ) async {
+    BuildContext context, {
+    DateTime? dueDate,
+    DateTime? validationDate,
+  }) async {
     try {
       // First try to fetch from regular challans table
       var challanData = await ChallanService.fetchChallanWithStudent(challanId);
@@ -37,7 +39,11 @@ class ChallanPrintService {
       }
 
       // Generate PDF
-      final pdf = await _generateChallanPDF(challanData);
+      final pdf = await _generateChallanPDF(
+        challanData,
+        dueDate: dueDate,
+        validationDate: validationDate,
+      );
 
       // Show PDF preview dialog
       await _showPdfPreview(context, pdf, challanId);
@@ -224,8 +230,10 @@ class ChallanPrintService {
   }
 
   static Future<pw.Document> _generateChallanPDF(
-    Map<String, dynamic> challanData,
-  ) async {
+    Map<String, dynamic> challanData, {
+    DateTime? dueDate,
+    DateTime? validationDate,
+  }) async {
     final pdf = pw.Document();
 
     // Extract data
@@ -237,10 +245,12 @@ class ChallanPrintService {
     // Store the original challanData for fee breakdown access
     final originalChallanData = challanData;
 
-    // Calculate dates
+    // Calculate dates - use provided dates or defaults
     final issueDate = challan.dateGenerated;
-    final dueDate = challan.dateGenerated.add(const Duration(days: 30));
-    final voucherValidUpto = dueDate.add(const Duration(days: 10));
+    final customDueDate =
+        dueDate ?? challan.dateGenerated.add(const Duration(days: 30));
+    final customValidationDate =
+        validationDate ?? customDueDate.add(const Duration(days: 10));
 
     // Build all copies
     final schoolCopy = await _buildChallanCopy(
@@ -248,8 +258,8 @@ class ChallanPrintService {
       challan,
       student,
       issueDate,
-      dueDate,
-      voucherValidUpto,
+      customDueDate,
+      customValidationDate,
       originalChallanData,
     );
     final bankCopy = await _buildChallanCopy(
@@ -257,8 +267,8 @@ class ChallanPrintService {
       challan,
       student,
       issueDate,
-      dueDate,
-      voucherValidUpto,
+      customDueDate,
+      customValidationDate,
       originalChallanData,
     );
     final studentCopy = await _buildChallanCopy(
@@ -266,8 +276,8 @@ class ChallanPrintService {
       challan,
       student,
       issueDate,
-      dueDate,
-      voucherValidUpto,
+      customDueDate,
+      customValidationDate,
       originalChallanData,
     );
 

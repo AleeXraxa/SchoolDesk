@@ -9,7 +9,6 @@ class SidebarController extends GetxController {
     {'icon': 'classes', 'title': 'Classes', 'route': '/classes'},
     {'icon': 'fees', 'title': 'Fees', 'route': '/fees'},
     {'icon': 'challans', 'title': 'Challans', 'route': '/challans'},
-    {'icon': 'attendance', 'title': 'Attendance', 'route': '/attendance'},
     {'icon': 'expenses', 'title': 'Expenses', 'route': '/expenses'},
     {'icon': 'users', 'title': 'Users', 'route': '/users'},
   ];

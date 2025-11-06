@@ -532,18 +532,334 @@ class MonthlyChallanView extends GetView<ChallanController> {
     );
   }
 
-  void _printChallan(dynamic challan, BuildContext context) async {
-    try {
-      await ChallanPrintService.printChallan(challan.challanId, context);
-    } catch (e) {
-      Get.snackbar(
-        'Error',
-        'Failed to print challan: $e',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red[100],
-        colorText: Colors.red[800],
-      );
-    }
+  void _printChallan(dynamic challan, BuildContext context) {
+    _showPrintChallanDialog(challan, context);
+  }
+
+  void _showPrintChallanDialog(dynamic challan, BuildContext context) {
+    final dueDateController = TextEditingController();
+    final validationDateController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    DateTime? selectedDueDate;
+    DateTime? selectedValidationDate;
+
+    Get.dialog(
+      Dialog(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        child: TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0.8, end: 1.0),
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.elasticOut,
+          builder: (context, scale, child) {
+            return Transform.scale(
+              scale: scale,
+              child: Container(
+                width: MediaQuery.of(context).size.width > 600 ? 450.w : 400.w,
+                padding: EdgeInsets.all(24.w),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20.r),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 20,
+                      spreadRadius: 5,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
+                child: SingleChildScrollView(
+                  child: Form(
+                    key: formKey,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Header
+                        Row(
+                          children: [
+                            Container(
+                              width: 40.w,
+                              height: 40.w,
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(10.r),
+                              ),
+                              child: Icon(
+                                Icons.print,
+                                color: AppColors.primary,
+                                size: 20.sp,
+                              ),
+                            ),
+                            SizedBox(width: 16.w),
+                            Expanded(
+                              child: Text(
+                                'Print Challan',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 20.sp,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 24.h),
+
+                        // Challan Info
+                        Container(
+                          padding: EdgeInsets.all(16.w),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[50],
+                            borderRadius: BorderRadius.circular(12.r),
+                            border: Border.all(color: Colors.grey[200]!),
+                          ),
+                          child: Column(
+                            children: [
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Challan ID',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 14.sp,
+                                      color: Colors.grey[700],
+                                    ),
+                                  ),
+                                  Text(
+                                    challan.challanId,
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 14.sp,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              SizedBox(height: 8.h),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Amount',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 14.sp,
+                                      color: Colors.grey[700],
+                                    ),
+                                  ),
+                                  Text(
+                                    'PKR ${challan.amount.toStringAsFixed(0)}',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 14.sp,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        SizedBox(height: 24.h),
+
+                        // Due Date Field
+                        TextFormField(
+                          controller: dueDateController,
+                          readOnly: true,
+                          decoration: InputDecoration(
+                            labelText: 'Challan Due Date',
+                            hintText: 'Select due date',
+                            prefixIcon: Icon(
+                              Icons.calendar_today,
+                              color: AppColors.primary,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8.r),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8.r),
+                              borderSide: BorderSide(
+                                color: AppColors.primary,
+                                width: 2,
+                              ),
+                            ),
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                Icons.date_range,
+                                color: AppColors.primary,
+                              ),
+                              onPressed: () async {
+                                final pickedDate = await showDatePicker(
+                                  context: context,
+                                  initialDate: DateTime.now(),
+                                  firstDate: DateTime.now(),
+                                  lastDate: DateTime.now().add(
+                                    const Duration(days: 365),
+                                  ),
+                                );
+                                if (pickedDate != null) {
+                                  selectedDueDate = pickedDate;
+                                  dueDateController.text = DateFormat(
+                                    'dd/MM/yyyy',
+                                  ).format(pickedDate);
+                                }
+                              },
+                            ),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return 'Due date is required';
+                            }
+                            return null;
+                          },
+                        ),
+                        SizedBox(height: 16.h),
+
+                        // Validation Date Field
+                        TextFormField(
+                          controller: validationDateController,
+                          readOnly: true,
+                          decoration: InputDecoration(
+                            labelText: 'Validation Date',
+                            hintText: 'Select validation date',
+                            prefixIcon: Icon(
+                              Icons.event_available,
+                              color: AppColors.primary,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8.r),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8.r),
+                              borderSide: BorderSide(
+                                color: AppColors.primary,
+                                width: 2,
+                              ),
+                            ),
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                Icons.date_range,
+                                color: AppColors.primary,
+                              ),
+                              onPressed: () async {
+                                final pickedDate = await showDatePicker(
+                                  context: context,
+                                  initialDate:
+                                      selectedDueDate ?? DateTime.now(),
+                                  firstDate: selectedDueDate ?? DateTime.now(),
+                                  lastDate: DateTime.now().add(
+                                    const Duration(days: 365),
+                                  ),
+                                );
+                                if (pickedDate != null) {
+                                  selectedValidationDate = pickedDate;
+                                  validationDateController.text = DateFormat(
+                                    'dd/MM/yyyy',
+                                  ).format(pickedDate);
+                                }
+                              },
+                            ),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return 'Validation date is required';
+                            }
+                            if (selectedDueDate != null &&
+                                selectedValidationDate != null) {
+                              if (selectedValidationDate!.isBefore(
+                                selectedDueDate!,
+                              )) {
+                                return 'Validation date must be after due date';
+                              }
+                            }
+                            return null;
+                          },
+                        ),
+                        SizedBox(height: 32.h),
+
+                        // Buttons
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: () => Get.back(),
+                                style: OutlinedButton.styleFrom(
+                                  padding: EdgeInsets.symmetric(vertical: 14.h),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8.r),
+                                  ),
+                                  side: BorderSide(color: Colors.grey[300]!),
+                                ),
+                                child: Text(
+                                  'Cancel',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 14.sp,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.grey[700],
+                                  ),
+                                ),
+                              ),
+                            ),
+                            SizedBox(width: 16.w),
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: () async {
+                                  if (formKey.currentState?.validate() ??
+                                      false) {
+                                    try {
+                                      // Print challan with the selected dates
+                                      await ChallanPrintService.printChallan(
+                                        challan.challanId,
+                                        context,
+                                        dueDate: selectedDueDate,
+                                        validationDate: selectedValidationDate,
+                                      );
+                                      Get.back(); // Close dialog
+                                    } catch (e) {
+                                      Get.snackbar(
+                                        'Error',
+                                        'Failed to print challan: $e',
+                                        snackPosition: SnackPosition.BOTTOM,
+                                        backgroundColor: Colors.red[100],
+                                        colorText: Colors.red[800],
+                                      );
+                                    }
+                                  }
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primary,
+                                  padding: EdgeInsets.symmetric(vertical: 14.h),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8.r),
+                                  ),
+                                  elevation: 2,
+                                ),
+                                child: Text(
+                                  'Print Challan',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 14.sp,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+      barrierDismissible: true,
+    );
   }
 
   Widget _buildDetailRow(String label, String value) {
