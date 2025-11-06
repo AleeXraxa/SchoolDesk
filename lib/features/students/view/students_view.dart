@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:data_table_2/data_table_2.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../widgets/footer_widget.dart';
 import '../controller/students_controller.dart';
 import '../controller/new_admission_controller.dart';
 import 'new_admission_view.dart';
@@ -19,6 +20,7 @@ class StudentsView extends GetView<StudentsController> {
         children: [
           _buildHeader(),
           Expanded(child: _buildStudentsList()),
+          const FooterWidget(),
         ],
       ),
     );

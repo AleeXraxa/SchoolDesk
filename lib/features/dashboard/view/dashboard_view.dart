@@ -8,6 +8,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../widgets/result_dialog.dart';
+import '../../../widgets/footer_widget.dart';
 import '../controller/dashboard_controller.dart';
 import '../widgets/sidebar/sidebar_widget.dart';
 import '../widgets/sidebar/sidebar_controller.dart';
@@ -86,6 +87,8 @@ class DashboardView extends GetView<DashboardController> {
             _buildHeaderBar(),
             // Main Body Content
             Expanded(child: _buildMainBody()),
+            // Footer
+            const FooterWidget(),
           ],
         );
       case 1: // Students
@@ -107,6 +110,8 @@ class DashboardView extends GetView<DashboardController> {
             _buildHeaderBar(),
             // Main Body Content
             Expanded(child: _buildMainBody()),
+            // Footer
+            const FooterWidget(),
           ],
         );
     }

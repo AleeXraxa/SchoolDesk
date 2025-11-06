@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:data_table_2/data_table_2.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../widgets/footer_widget.dart';
 import '../controller/classes_controller.dart';
 import '../controller/new_class_controller.dart';
 import '../model/class_model.dart';
@@ -20,6 +21,7 @@ class ClassesView extends GetView<ClassesController> {
         children: [
           _buildHeader(),
           Expanded(child: _buildClassesList()),
+          const FooterWidget(),
         ],
       ),
     );

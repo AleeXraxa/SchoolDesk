@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:data_table_2/data_table_2.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../widgets/footer_widget.dart';
 import '../../../data/models/expense_model.dart';
 import '../controller/expenses_controller.dart';
 
@@ -18,6 +19,7 @@ class ExpensesView extends GetView<ExpensesController> {
         children: [
           _buildHeader(),
           Expanded(child: _buildExpensesDashboard()),
+          const FooterWidget(),
         ],
       ),
     );

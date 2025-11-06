@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:data_table_2/data_table_2.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../widgets/footer_widget.dart';
 import '../controller/users_controller.dart';
 import '../widgets/user_dialog.dart';
 
@@ -18,6 +19,7 @@ class UsersView extends GetView<UsersController> {
         children: [
           _buildHeader(),
           Expanded(child: _buildUsersList()),
+          const FooterWidget(),
         ],
       ),
     );

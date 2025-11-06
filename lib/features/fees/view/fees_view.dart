@@ -3,6 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../widgets/footer_widget.dart';
 import '../controller/fees_controller.dart';
 import 'admission_fees_view.dart';
 import 'monthly_fees_view.dart';
@@ -22,6 +23,7 @@ class FeesView extends GetView<FeesController> {
         children: [
           _buildHeader(),
           Expanded(child: _buildContent()),
+          const FooterWidget(),
         ],
       ),
     );

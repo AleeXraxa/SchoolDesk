@@ -3,6 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../widgets/footer_widget.dart';
 import '../controller/challan_controller.dart';
 import 'admission_challan_view.dart';
 import 'monthly_challan_view.dart';
@@ -199,6 +200,7 @@ class ChallanMainView extends GetView<ChallanController> {
         children: [
           _buildHeader(),
           Expanded(child: _buildContent()),
+          const FooterWidget(),
         ],
       ),
     );
