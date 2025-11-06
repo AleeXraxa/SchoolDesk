@@ -1462,7 +1462,8 @@ class MiscFeesController extends GetxController {
         );
 
         // Get the total fee from the pending misc fee to calculate remaining amount
-        double totalFee = 0.0;
+        double totalFee =
+            totalPaidAmount; // Default to paid amount if pending fee not found
         try {
           // Try to get the pending fee to get total amount
           final pendingFees = await MiscFeesService.getPendingMiscFees();
@@ -1475,14 +1476,16 @@ class MiscFeesController extends GetxController {
               classId: firstFee.classId,
               miscFeeType: firstFee.miscFeeType,
               month: '',
-              totalFee: 0.0,
-              paidAmount: 0.0,
-              status: 'Pending',
+              totalFee: totalPaidAmount, // Use paid amount as fallback
+              paidAmount: totalPaidAmount,
+              status: 'Paid',
             ),
           );
-          totalFee = pendingFee.totalFee;
+          totalFee = pendingFee.totalFee > 0
+              ? pendingFee.totalFee
+              : totalPaidAmount;
         } catch (e) {
-          // If we can't get the pending fee, assume the paid amount is the total
+          // If we can't get the pending fee, use the paid amount as total
           totalFee = totalPaidAmount;
         }
 

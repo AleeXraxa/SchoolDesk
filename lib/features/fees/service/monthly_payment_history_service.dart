@@ -157,7 +157,7 @@ class MonthlyPaymentHistoryService {
       // Sum from misc fees
       try {
         final miscResult = await db.rawQuery(
-          "SELECT SUM(paid_amount) as total FROM misc_paid_fees",
+          "SELECT SUM(paid_amount) as total FROM misc_fees_paid",
         );
         if (miscResult.isNotEmpty && miscResult.first['total'] != null) {
           total += (miscResult.first['total'] as num).toDouble();
@@ -169,7 +169,7 @@ class MonthlyPaymentHistoryService {
       // Sum from exam fees
       try {
         final examResult = await db.rawQuery(
-          "SELECT SUM(paid_amount) as total FROM exam_paid_fees",
+          "SELECT SUM(paid_amount) as total FROM exam_fees_paid",
         );
         if (examResult.isNotEmpty && examResult.first['total'] != null) {
           total += (examResult.first['total'] as num).toDouble();
@@ -225,10 +225,17 @@ class MonthlyPaymentHistoryService {
       // From misc payments
       try {
         final miscResults = await db.rawQuery(
-          "SELECT substr(payment_date, 9, 2) as day, SUM(paid_amount) as amount FROM misc_paid_fees WHERE substr(payment_date, 1, 7) = ? GROUP BY substr(payment_date, 9, 2)",
+          "SELECT substr(payment_date, 9, 2) as day, SUM(paid_amount) as amount FROM misc_fees_paid WHERE substr(payment_date, 1, 7) = ? GROUP BY substr(payment_date, 9, 2)",
           [monthStr],
         );
-        results.addAll(miscResults);
+        // Filter out invalid day values that might result from ISO8601 format
+        final filteredResults = miscResults.where((result) {
+          final dayStr = result['day'] as String?;
+          if (dayStr == null) return false;
+          final day = int.tryParse(dayStr);
+          return day != null && day >= 1 && day <= 31;
+        }).toList();
+        results.addAll(filteredResults);
       } catch (e) {
         // Table might not exist
       }
@@ -236,7 +243,7 @@ class MonthlyPaymentHistoryService {
       // From exam payments
       try {
         final examResults = await db.rawQuery(
-          "SELECT substr(payment_date, 9, 2) as day, SUM(paid_amount) as amount FROM exam_paid_fees WHERE substr(payment_date, 1, 7) = ? GROUP BY substr(payment_date, 9, 2)",
+          "SELECT substr(payment_date, 9, 2) as day, SUM(paid_amount) as amount FROM exam_fees_paid WHERE substr(payment_date, 1, 7) = ? GROUP BY substr(payment_date, 9, 2)",
           [monthStr],
         );
         results.addAll(examResults);
