@@ -110,6 +110,8 @@ class DatabaseService {
           admission_fees REAL NOT NULL,
           monthly_fees REAL NOT NULL,
           status TEXT NOT NULL DEFAULT 'Active',
+          is_monthly_fee_synced INTEGER NOT NULL DEFAULT 0,
+          created_at TEXT,
           FOREIGN KEY (class_id) REFERENCES classes (id)
         )
       ''');
@@ -592,6 +594,91 @@ class DatabaseService {
     try {
       print('DatabaseService: Database opened, checking for missing tables...');
 
+      // Check if users table exists, create if not
+      final usersTables = await db.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='users'",
+      );
+
+      if (usersTables.isEmpty) {
+        print('DatabaseService: Creating users table...');
+        await db.execute('''
+          CREATE TABLE users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL,
+            role TEXT NOT NULL DEFAULT 'user',
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+          )
+        ''');
+
+        final passwordHash = _hashPassword('admin123');
+        await db.insert('users', {
+          'username': 'admin',
+          'password_hash': passwordHash,
+          'role': 'admin',
+          'created_at': DateTime.now().toIso8601String(),
+          'updated_at': DateTime.now().toIso8601String(),
+        });
+        print('DatabaseService: Users table created with default admin user');
+      }
+
+      // Check if classes table exists, create if not
+      final classesTables = await db.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='classes'",
+      );
+
+      if (classesTables.isEmpty) {
+        print('DatabaseService: Creating classes table...');
+        await db.execute('''
+          CREATE TABLE classes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            class_name TEXT NOT NULL,
+            section TEXT NOT NULL,
+            total_students INTEGER DEFAULT 0
+          )
+        ''');
+        print('DatabaseService: Classes table created');
+      }
+
+      // Check if students table exists, create if not
+      final studentsTables = await db.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='students'",
+      );
+
+      if (studentsTables.isEmpty) {
+        print('DatabaseService: Creating students table...');
+        await db.execute('''
+          CREATE TABLE students (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            roll_no TEXT NOT NULL UNIQUE,
+            gr_no TEXT NOT NULL UNIQUE,
+            student_name TEXT NOT NULL,
+            father_name TEXT NOT NULL,
+            caste TEXT NOT NULL,
+            place_of_birth TEXT NOT NULL,
+            dob_figures TEXT NOT NULL,
+            dob_words TEXT NOT NULL,
+            gender TEXT NOT NULL,
+            religion TEXT NOT NULL,
+            father_contact TEXT NOT NULL,
+            mother_contact TEXT NOT NULL,
+            address TEXT NOT NULL,
+            admission_date TEXT NOT NULL,
+            class_id INTEGER,
+            class_name TEXT NOT NULL,
+            section TEXT NOT NULL,
+            admission_fees REAL NOT NULL,
+            monthly_fees REAL NOT NULL,
+            status TEXT NOT NULL DEFAULT 'Active',
+            is_monthly_fee_synced INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT,
+            FOREIGN KEY (class_id) REFERENCES classes (id)
+          )
+        ''');
+        print('DatabaseService: Students table created');
+      }
+
       // Check if admission_fees table exists, create if not
       final tables = await db.rawQuery(
         "SELECT name FROM sqlite_master WHERE type='table' AND name='admission_fees'",
@@ -680,6 +767,59 @@ class DatabaseService {
           )
         ''');
         print('DatabaseService: Monthly payment history table created');
+      }
+
+      // Check if exam_fees_pending table exists, create if not
+      final examPendingTables = await db.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='exam_fees_pending'",
+      );
+
+      if (examPendingTables.isEmpty) {
+        print('DatabaseService: Creating exam_fees_pending table...');
+        await db.execute('''
+          CREATE TABLE exam_fees_pending (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            student_id INTEGER NOT NULL,
+            class_id INTEGER NOT NULL,
+            exam_name TEXT NOT NULL,
+            exam_month TEXT NOT NULL,
+            total_fee REAL NOT NULL DEFAULT 0.00,
+            paid_amount REAL NOT NULL DEFAULT 0.00,
+            status TEXT NOT NULL DEFAULT 'Pending',
+            due_date TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE,
+            FOREIGN KEY (class_id) REFERENCES classes (id) ON DELETE CASCADE
+          )
+        ''');
+        print('DatabaseService: Exam fees pending table created');
+      }
+
+      // Check if exam_fees_paid table exists, create if not
+      final examPaidTables = await db.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='exam_fees_paid'",
+      );
+
+      if (examPaidTables.isEmpty) {
+        print('DatabaseService: Creating exam_fees_paid table...');
+        await db.execute('''
+          CREATE TABLE exam_fees_paid (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            pending_exam_fee_id INTEGER,
+            student_id INTEGER NOT NULL,
+            class_id INTEGER NOT NULL,
+            exam_name TEXT NOT NULL,
+            paid_amount REAL NOT NULL,
+            payment_date TEXT NOT NULL,
+            payment_mode TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY (pending_exam_fee_id) REFERENCES exam_fees_pending (id) ON DELETE CASCADE,
+            FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE,
+            FOREIGN KEY (class_id) REFERENCES classes (id) ON DELETE CASCADE
+          )
+        ''');
+        print('DatabaseService: Exam fees paid table created');
       }
 
       // Check if misc_fees_pending table exists, create if not
@@ -808,6 +948,100 @@ class DatabaseService {
           )
         ''');
         print('DatabaseService: Expenses table created');
+      }
+
+      // Ensure students.created_at exists for dashboards/admission analytics
+      final studentsColumnInfo = await db.rawQuery("PRAGMA table_info(students)");
+      final hasStudentsCreatedAt = studentsColumnInfo.any(
+        (column) => column['name'] == 'created_at',
+      );
+      final hasMonthlyFeeSynced = studentsColumnInfo.any(
+        (column) => column['name'] == 'is_monthly_fee_synced',
+      );
+      if (!hasStudentsCreatedAt) {
+        print('DatabaseService: Adding missing created_at column to students table...');
+        await db.execute('ALTER TABLE students ADD COLUMN created_at TEXT');
+        await db.execute(
+          "UPDATE students SET created_at = admission_date WHERE created_at IS NULL OR created_at = ''",
+        );
+        print('DatabaseService: Added and backfilled students.created_at');
+      }
+      if (!hasMonthlyFeeSynced) {
+        print(
+          'DatabaseService: Adding missing is_monthly_fee_synced column to students table...',
+        );
+        await db.execute(
+          'ALTER TABLE students ADD COLUMN is_monthly_fee_synced INTEGER NOT NULL DEFAULT 0',
+        );
+        print('DatabaseService: Added students.is_monthly_fee_synced');
+      }
+
+      // Ensure admission_fees has migration-added columns
+      final admissionFeeColumns = await db.rawQuery(
+        'PRAGMA table_info(admission_fees)',
+      );
+      final admissionFeeColumnNames = admissionFeeColumns
+          .map((col) => col['name'] as String)
+          .toSet();
+      if (!admissionFeeColumnNames.contains('due_date')) {
+        await db.execute('ALTER TABLE admission_fees ADD COLUMN due_date TEXT');
+        print('DatabaseService: Added admission_fees.due_date');
+      }
+      if (!admissionFeeColumnNames.contains('payment_date')) {
+        await db.execute(
+          'ALTER TABLE admission_fees ADD COLUMN payment_date TEXT',
+        );
+        print('DatabaseService: Added admission_fees.payment_date');
+      }
+
+      // Ensure challans has migration-added columns used by UI/services
+      final challanColumns = await db.rawQuery('PRAGMA table_info(challans)');
+      final challanColumnNames = challanColumns
+          .map((col) => col['name'] as String)
+          .toSet();
+      final challanRequiredColumns = <String, String>{
+        'class_id': 'INTEGER',
+        'reference_fee_id': 'INTEGER',
+        'date_paid': 'TEXT',
+        'payment_mode': 'TEXT',
+        'remarks': 'TEXT',
+        'month': 'TEXT',
+        'exam_details': 'TEXT',
+        'fee_details': 'TEXT',
+      };
+      for (final entry in challanRequiredColumns.entries) {
+        if (!challanColumnNames.contains(entry.key)) {
+          await db.execute(
+            'ALTER TABLE challans ADD COLUMN ${entry.key} ${entry.value}',
+          );
+          print('DatabaseService: Added challans.${entry.key}');
+        }
+      }
+
+      // Ensure multiple_challans compatibility column exists
+      final multipleChallanColumns = await db.rawQuery(
+        'PRAGMA table_info(multiple_challans)',
+      );
+      final multipleChallanColumnNames = multipleChallanColumns
+          .map((col) => col['name'] as String)
+          .toSet();
+      if (!multipleChallanColumnNames.contains('created_by')) {
+        await db.execute('ALTER TABLE multiple_challans ADD COLUMN created_by TEXT');
+        print('DatabaseService: Added multiple_challans.created_by');
+      }
+
+      // Ensure expenses optional timestamp columns exist
+      final expensesColumns = await db.rawQuery('PRAGMA table_info(expenses)');
+      final expenseColumnNames = expensesColumns
+          .map((col) => col['name'] as String)
+          .toSet();
+      if (!expenseColumnNames.contains('created_at')) {
+        await db.execute('ALTER TABLE expenses ADD COLUMN created_at TEXT');
+        print('DatabaseService: Added expenses.created_at');
+      }
+      if (!expenseColumnNames.contains('updated_at')) {
+        await db.execute('ALTER TABLE expenses ADD COLUMN updated_at TEXT');
+        print('DatabaseService: Added expenses.updated_at');
       }
     } catch (e, stackTrace) {
       print('DatabaseService: Error during database open: $e');

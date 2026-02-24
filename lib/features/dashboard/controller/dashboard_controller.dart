@@ -9,6 +9,20 @@ import '../../expenses/service/expense_service.dart';
 
 class DashboardController extends GetxController {
   final DashboardService _dashboardService = DashboardService();
+  static const List<String> _monthNames = [
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
+  ];
 
   // User data
   var currentUser = Rx<UserModel?>(null);
@@ -39,7 +53,8 @@ class DashboardController extends GetxController {
   var totalExpensesThisMonth = 0.0.obs;
 
   // Monthly revenue overview state
-  var selectedMonth = "November 2025".obs;
+  var selectedMonth = ''.obs;
+  var availableMonths = <String>[].obs;
   var dailyRevenue = <int, double>{}.obs;
 
   @override
@@ -51,6 +66,7 @@ class DashboardController extends GetxController {
       currentUser.value = args;
     }
 
+    _refreshAvailableMonths();
     loadDashboardStats();
   }
 
@@ -115,21 +131,7 @@ class DashboardController extends GetxController {
       final year = int.parse(parts[1]);
 
       // Convert month name to number
-      final monthNames = [
-        'January',
-        'February',
-        'March',
-        'April',
-        'May',
-        'June',
-        'July',
-        'August',
-        'September',
-        'October',
-        'November',
-        'December',
-      ];
-      final month = monthNames.indexOf(monthName) + 1;
+      final month = _monthNames.indexOf(monthName) + 1;
 
       final revenue =
           await MonthlyPaymentHistoryService.getDailyRevenueForMonth(
@@ -141,5 +143,17 @@ class DashboardController extends GetxController {
       print('Error loading daily revenue: $e');
       dailyRevenue.value = {};
     }
+  }
+
+  void _refreshAvailableMonths() {
+    final now = DateTime.now();
+    final months = <String>[];
+
+    for (int month = 1; month <= now.month; month++) {
+      months.add('${_monthNames[month - 1]} ${now.year}');
+    }
+
+    availableMonths.value = months;
+    selectedMonth.value = months.last;
   }
 }

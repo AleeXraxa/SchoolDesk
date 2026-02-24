@@ -225,23 +225,18 @@ class StudentService {
     try {
       final now = DateTime.now();
       final startOfMonth = DateTime(now.year, now.month, 1);
-      final endOfMonth = DateTime(
-        now.year,
-        now.month + 1,
-        1,
-      ).subtract(const Duration(days: 1));
+      final startOfNextMonth = DateTime(now.year, now.month + 1, 1);
 
       final db = await DatabaseService.database;
-      final result = await db.query(
-        'students',
-        where: 'created_at >= ? AND created_at <= ?',
-        whereArgs: [
+      final result = await db.rawQuery(
+        'SELECT COUNT(*) AS count FROM students WHERE created_at >= ? AND created_at < ?',
+        [
           startOfMonth.toIso8601String(),
-          endOfMonth.toIso8601String(),
+          startOfNextMonth.toIso8601String(),
         ],
       );
 
-      return result.length;
+      return (result.first['count'] as int?) ?? 0;
     } catch (e, stackTrace) {
       print('StudentService: Error getting admissions this month: $e');
       print('StudentService: Stack trace: $stackTrace');

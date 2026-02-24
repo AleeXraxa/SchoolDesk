@@ -256,6 +256,9 @@ class MultipleChallanView extends StatelessWidget {
   void _showGenerateChallanDialog(BuildContext context) {
     final selectedMonth = Rx<String>('');
     final studentIdController = TextEditingController();
+    final rollSearchQuery = ''.obs;
+    final studentSearchResults = <Map<String, dynamic>>[].obs;
+    final suppressRollSearchChange = false.obs;
     final selectedEntries = <Map<String, dynamic>>[].obs;
     final isLoading = false.obs;
     final paidEntries = <Map<String, dynamic>>[].obs;
@@ -334,6 +337,153 @@ class MultipleChallanView extends StatelessWidget {
 
                     SizedBox(height: 24.h),
 
+                    // Student Roll No Search
+                    Container(
+                      padding: EdgeInsets.all(16.w),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[50],
+                        borderRadius: BorderRadius.circular(12.r),
+                        border: Border.all(color: Colors.grey[200]!),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Student Roll No',
+                            style: GoogleFonts.poppins(
+                              fontSize: 14.sp,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          SizedBox(height: 8.h),
+                          TextFormField(
+                            controller: studentIdController,
+                            onChanged: (value) async {
+                              if (suppressRollSearchChange.value) return;
+                              rollSearchQuery.value = value.trim();
+                              // Any roll number change invalidates previously fetched state.
+                              paidEntries.clear();
+                              selectedEntries.clear();
+                              foundStudentData.value = null;
+
+                              if (rollSearchQuery.value.isEmpty) {
+                                studentSearchResults.clear();
+                                return;
+                              }
+
+                              final results = await _searchStudentsByRollNoLike(
+                                rollSearchQuery.value,
+                              );
+                              studentSearchResults.value = results;
+                            },
+                            decoration: InputDecoration(
+                              hintText: 'Type roll no e.g. 01 or BMS-00001',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8.r),
+                              ),
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 12.w,
+                                vertical: 12.h,
+                              ),
+                            ),
+                            style: GoogleFonts.inter(fontSize: 14.sp),
+                          ),
+
+                          SizedBox(height: 8.h),
+
+                          Obx(
+                            () => studentSearchResults.isNotEmpty
+                                ? Container(
+                                    constraints: BoxConstraints(maxHeight: 180.h),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      border: Border.all(color: Colors.grey[300]!),
+                                      borderRadius: BorderRadius.circular(8.r),
+                                    ),
+                                    child: ListView.separated(
+                                      shrinkWrap: true,
+                                      itemCount: studentSearchResults.length,
+                                      separatorBuilder: (_, __) => Divider(
+                                        height: 1,
+                                        color: Colors.grey[200],
+                                      ),
+                                      itemBuilder: (context, index) {
+                                        final student =
+                                            studentSearchResults[index];
+                                        final roll =
+                                            student['roll_no']?.toString() ?? '';
+                                        final name =
+                                            student['student_name']?.toString() ??
+                                                'Unknown';
+                                        return ListTile(
+                                          dense: true,
+                                          title: Text(
+                                            roll,
+                                            style: GoogleFonts.inter(
+                                              fontSize: 13.sp,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          subtitle: Text(
+                                            name,
+                                            style: GoogleFonts.inter(
+                                              fontSize: 12.sp,
+                                              color: Colors.grey[700],
+                                            ),
+                                          ),
+                                          onTap: () {
+                                            suppressRollSearchChange.value =
+                                                true;
+                                            foundStudentData.value = student;
+                                            studentIdController.text = roll;
+                                            rollSearchQuery.value = roll;
+                                            studentSearchResults.clear();
+                                            paidEntries.clear();
+                                            selectedEntries.clear();
+                                            suppressRollSearchChange.value =
+                                                false;
+                                          },
+                                        );
+                                      },
+                                    ),
+                                  )
+                                : (rollSearchQuery.value.isNotEmpty &&
+                                          foundStudentData.value == null
+                                      ? Padding(
+                                          padding: EdgeInsets.only(top: 4.h),
+                                          child: Text(
+                                            'No matching student found',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 12.sp,
+                                              color: Colors.red[600],
+                                            ),
+                                          ),
+                                        )
+                                      : const SizedBox.shrink()),
+                          ),
+
+                          Obx(
+                            () => foundStudentData.value != null
+                                ? Padding(
+                                    padding: EdgeInsets.only(top: 8.h),
+                                    child: Text(
+                                      'Selected: ${foundStudentData.value!['student_name']} (${foundStudentData.value!['roll_no']})',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 12.sp,
+                                        color: Colors.green[700],
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  )
+                                : const SizedBox.shrink(),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    SizedBox(height: 16.h),
+
                     // Month Selector
                     Container(
                       padding: EdgeInsets.all(16.w),
@@ -380,51 +530,11 @@ class MultipleChallanView extends StatelessWidget {
                               }).toList(),
                               onChanged: (value) {
                                 selectedMonth.value = value ?? '';
-                                // Clear previous data when month changes
+                                // Clear previous fetched entries when month changes.
                                 paidEntries.clear();
                                 selectedEntries.clear();
                               },
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    SizedBox(height: 16.h),
-
-                    // Student Roll No Field
-                    Container(
-                      padding: EdgeInsets.all(16.w),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[50],
-                        borderRadius: BorderRadius.circular(12.r),
-                        border: Border.all(color: Colors.grey[200]!),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Student Roll No',
-                            style: GoogleFonts.poppins(
-                              fontSize: 14.sp,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.black87,
-                            ),
-                          ),
-                          SizedBox(height: 8.h),
-                          TextFormField(
-                            controller: studentIdController,
-                            decoration: InputDecoration(
-                              hintText: 'Enter student roll number',
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8.r),
-                              ),
-                              contentPadding: EdgeInsets.symmetric(
-                                horizontal: 12.w,
-                                vertical: 12.h,
-                              ),
-                            ),
-                            style: GoogleFonts.inter(fontSize: 14.sp),
                           ),
                         ],
                       ),
@@ -439,26 +549,33 @@ class MultipleChallanView extends StatelessWidget {
                         () => ElevatedButton.icon(
                           onPressed:
                               selectedMonth.value.isEmpty ||
-                                  studentIdController.text.trim().isEmpty
+                                  foundStudentData.value == null
                               ? null
                               : () async {
-                                  // First check if student exists and get their ID
-                                  final rollNo = studentIdController.text
-                                      .trim();
-                                  final studentData =
-                                      await _checkStudentByRollNo(rollNo);
-
-                                  if (studentData == null) {
-                                    return; // Student not found, error already shown
+                                  // Reset prior selection before a fresh fetch.
+                                  selectedEntries.clear();
+                                  paidEntries.clear();
+                                  final selectedStudent =
+                                      foundStudentData.value;
+                                  final studentId = int.tryParse(
+                                    selectedStudent?['id']?.toString() ?? '',
+                                  );
+                                  if (studentId == null) {
+                                    Get.snackbar(
+                                      'Error',
+                                      'Please select a valid student from the list.',
+                                      snackPosition: SnackPosition.BOTTOM,
+                                      backgroundColor: Colors.red,
+                                      colorText: Colors.white,
+                                    );
+                                    return;
                                   }
-
-                                  foundStudentData.value = studentData;
 
                                   isLoading.value = true;
                                   try {
                                     await _fetchPaidEntries(
                                       selectedMonth.value,
-                                      studentIdController.text.trim(),
+                                      studentId,
                                       paidEntries,
                                     );
                                   } finally {
@@ -555,6 +672,9 @@ class MultipleChallanView extends StatelessWidget {
                                             ),
                                         itemBuilder: (context, index) {
                                           final entry = paidEntries[index];
+                                          final entryKey = _getEntrySelectionKey(
+                                            entry,
+                                          );
                                           return Obx(
                                             () => Container(
                                               padding: EdgeInsets.all(12.w),
@@ -563,20 +683,34 @@ class MultipleChallanView extends StatelessWidget {
                                                   Checkbox(
                                                     value: selectedEntries.any(
                                                       (selected) =>
-                                                          selected['id'] ==
-                                                          entry['id'],
+                                                          _getEntrySelectionKey(
+                                                            selected,
+                                                          ) ==
+                                                          entryKey,
                                                     ),
                                                     onChanged: (value) {
                                                       if (value == true) {
-                                                        selectedEntries.add(
-                                                          entry,
-                                                        );
+                                                        final alreadySelected =
+                                                            selectedEntries.any(
+                                                              (selected) =>
+                                                                  _getEntrySelectionKey(
+                                                                    selected,
+                                                                  ) ==
+                                                                  entryKey,
+                                                            );
+                                                        if (!alreadySelected) {
+                                                          selectedEntries.add(
+                                                            entry,
+                                                          );
+                                                        }
                                                       } else {
                                                         selectedEntries
                                                             .removeWhere(
                                                               (selected) =>
-                                                                  selected['id'] ==
-                                                                  entry['id'],
+                                                                  _getEntrySelectionKey(
+                                                                    selected,
+                                                                  ) ==
+                                                                  entryKey,
                                                             );
                                                       }
                                                     },
@@ -684,7 +818,7 @@ class MultipleChallanView extends StatelessWidget {
                                               ),
                                             ),
                                             Text(
-                                              'Total: Rs. ${selectedEntries.fold<double>(0.0, (sum, entry) => sum + (entry['amount'] as double)).toStringAsFixed(0)}',
+                                              'Total: Rs. ${selectedEntries.fold<double>(0.0, (sum, entry) => sum + ((entry['amount'] as num?)?.toDouble() ?? 0.0)).toStringAsFixed(0)}',
                                               style: GoogleFonts.poppins(
                                                 fontSize: 14.sp,
                                                 fontWeight: FontWeight.w700,
@@ -708,7 +842,7 @@ class MultipleChallanView extends StatelessWidget {
                               ),
                               child: Center(
                                 child: Text(
-                                  'Select month and enter student roll number, then click "Fetch Paid Entries"',
+                                  'Select student and month, then click "Fetch Paid Entries"',
                                   style: GoogleFonts.inter(
                                     fontSize: 14.sp,
                                     color: Colors.grey[500],
@@ -747,21 +881,46 @@ class MultipleChallanView extends StatelessWidget {
                         SizedBox(width: 16.w),
                         Expanded(
                           child: Obx(
-                            () => ElevatedButton(
-                              onPressed: selectedEntries.isEmpty
-                                  ? null
-                                  : () async {
-                                      // Show option dialog for individual vs combined challans
-                                      _showChallanTypeDialog(
-                                        context,
-                                        selectedMonth.value,
-                                        int.parse(
-                                          foundStudentData.value!['id']
-                                              .toString(),
-                                        ),
-                                        selectedEntries,
-                                      );
-                                    },
+                            () {
+                              final studentData = foundStudentData.value;
+                              final studentId = int.tryParse(
+                                studentData?['id']?.toString() ?? '',
+                              );
+                              final canGenerate =
+                                  selectedEntries.isNotEmpty &&
+                                  selectedMonth.value.isNotEmpty &&
+                                  studentId != null;
+
+                              return ElevatedButton(
+                                onPressed: !canGenerate
+                                    ? null
+                                    : () async {
+                                        final safeStudentId = int.tryParse(
+                                          foundStudentData.value?['id']
+                                                  ?.toString() ??
+                                              '',
+                                        );
+                                        if (safeStudentId == null) {
+                                          Get.snackbar(
+                                            'Error',
+                                            'Student data is invalid. Please fetch paid entries again.',
+                                            snackPosition: SnackPosition.BOTTOM,
+                                            backgroundColor: Colors.red,
+                                            colorText: Colors.white,
+                                          );
+                                          return;
+                                        }
+
+                                        // Show option dialog for individual vs combined challans
+                                        _showChallanTypeDialog(
+                                          context,
+                                          selectedMonth.value,
+                                          safeStudentId,
+                                          selectedEntries
+                                              .map((e) => Map<String, dynamic>.from(e))
+                                              .toList(),
+                                        );
+                                      },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.primary,
                                 padding: EdgeInsets.symmetric(vertical: 14.h),
@@ -778,7 +937,8 @@ class MultipleChallanView extends StatelessWidget {
                                   color: Colors.white,
                                 ),
                               ),
-                            ),
+                              );
+                            },
                           ),
                         ),
                       ],
@@ -867,56 +1027,14 @@ class MultipleChallanView extends StatelessWidget {
 
   Future<void> _fetchPaidEntries(
     String selectedMonth,
-    String rollNo,
+    int studentId,
     RxList<Map<String, dynamic>> paidEntries,
   ) async {
     try {
       final db = await DatabaseService.database;
 
       print('=== DEBUG: Fetching paid entries ===');
-      print('Roll No: "$rollNo"');
-
-      // First get student ID from roll number
-      final studentResult = await db.query(
-        'students',
-        where: 'roll_no = ?',
-        whereArgs: [rollNo.trim()],
-        limit: 1,
-      );
-
-      print('Student query result count: ${studentResult.length}');
-
-      if (studentResult.isNotEmpty) {
-        final student = studentResult.first;
-        print(
-          'Found student: ID=${student['id']}, Name=${student['student_name']}, Roll=${student['roll_no']}',
-        );
-      } else {
-        print('No student found with roll number: "$rollNo"');
-
-        // Debug: Show all students
-        final allStudents = await db.query('students');
-        print('All students in database:');
-        for (var student in allStudents) {
-          print(
-            '  ID: ${student['id']}, Roll: "${student['roll_no']}", Name: ${student['student_name']}',
-          );
-        }
-      }
-
-      if (studentResult.isEmpty) {
-        Get.snackbar(
-          'Error',
-          'Student with roll number $rollNo not found',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red,
-          colorText: Colors.white,
-        );
-        return;
-      }
-
-      final studentId = studentResult.first['id'].toString();
-      print('Using student ID: $studentId');
+      print('Student ID: "$studentId"');
 
       // Parse the selected month to get year and month
       final monthDate = DateFormat('MMMM yyyy').parse(selectedMonth);
@@ -1003,17 +1121,24 @@ class MultipleChallanView extends StatelessWidget {
 
       // Convert to the expected format
       paidEntries.value = allPayments.map((payment) {
+        final feeType = payment['fees_type'] as String? ?? 'Unknown';
+        final paymentId = payment['id']?.toString() ?? '';
+        final paymentDateRaw = payment['payment_date'] as String? ?? '';
+        final paymentDate = DateTime.parse(paymentDateRaw);
+        final entryKey = '$feeType|$paymentId|$paymentDateRaw';
         return {
-          'id': payment['id'].toString(),
+          'id': paymentId,
           'amount': (payment['amount'] as num).toDouble(),
-          'payment_date': DateTime.parse(payment['payment_date'] as String),
+          'payment_date': paymentDate,
+          'payment_date_raw': paymentDateRaw,
           'mode_of_payment': payment['mode_of_payment'] as String,
-          'fees_type': payment['fees_type'] as String,
+          'fees_type': feeType,
+          'entry_key': entryKey,
         };
       }).toList();
 
       print(
-        'Fetched ${paidEntries.length} paid entries for student (Roll No: $rollNo, ID: $studentId) in $selectedMonth',
+        'Fetched ${paidEntries.length} paid entries for student ID: $studentId in $selectedMonth',
       );
     } catch (e) {
       print('Error fetching paid entries: $e');
@@ -1026,6 +1151,39 @@ class MultipleChallanView extends StatelessWidget {
         colorText: Colors.white,
       );
     }
+  }
+
+  Future<List<Map<String, dynamic>>> _searchStudentsByRollNoLike(
+    String query,
+  ) async {
+    try {
+      final db = await DatabaseService.database;
+      return await db.query(
+        'students',
+        where: "roll_no IS NOT NULL AND roll_no != '' AND LOWER(roll_no) LIKE ?",
+        whereArgs: ['%${query.toLowerCase()}%'],
+        orderBy: 'roll_no ASC',
+        limit: 20,
+      );
+    } catch (e) {
+      print('Error searching students by roll no: $e');
+      return [];
+    }
+  }
+
+  String _getEntrySelectionKey(Map<String, dynamic> entry) {
+    final fromStoredKey = entry['entry_key']?.toString();
+    if (fromStoredKey != null && fromStoredKey.isNotEmpty) {
+      return fromStoredKey;
+    }
+
+    final feeType = entry['fees_type']?.toString() ?? 'Unknown';
+    final id = entry['id']?.toString() ?? '';
+    final paymentDateRaw =
+        entry['payment_date_raw']?.toString() ??
+        entry['payment_date']?.toString() ??
+        '';
+    return '$feeType|$id|$paymentDateRaw';
   }
 
   Color _getFeeTypeColor(String feeType) {

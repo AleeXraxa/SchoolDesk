@@ -528,6 +528,78 @@ class DashboardView extends GetView<DashboardController> {
       // Get revenue data
       final revenueMap = controller.dailyRevenue;
       final selectedMonth = controller.selectedMonth.value;
+      final collectedEntries =
+          revenueMap.entries
+              .where(
+                (entry) => entry.key >= 1 && entry.key <= 31 && entry.value > 0,
+              )
+              .toList()
+            ..sort((a, b) => a.key.compareTo(b.key));
+      final invalidDateTotal = revenueMap.entries
+          .where((entry) => (entry.key < 1 || entry.key > 31) && entry.value > 0)
+          .fold<double>(0.0, (sum, entry) => sum + entry.value);
+      final List<pw.TableRow> revenueRows = collectedEntries.isEmpty
+          ? [
+              pw.TableRow(
+                children: [
+                  pw.Container(
+                    padding: const pw.EdgeInsets.all(8),
+                    child: pw.Text('No collections found'),
+                  ),
+                  pw.Container(
+                    padding: const pw.EdgeInsets.all(8),
+                    child: pw.Text('0'),
+                  ),
+                ],
+              ),
+            ]
+          : collectedEntries.map((entry) {
+              final day = entry.key;
+              final revenue = entry.value;
+              final revenueStr = revenue
+                  .toStringAsFixed(0)
+                  .replaceAllMapped(
+                    RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+                    (Match m) => '${m[1]},',
+                  );
+
+              return pw.TableRow(
+                children: [
+                  pw.Container(
+                    padding: const pw.EdgeInsets.all(8),
+                    child: pw.Text(
+                      '${day.toString().padLeft(2, '0')} $selectedMonth',
+                    ),
+                  ),
+                  pw.Container(
+                    padding: const pw.EdgeInsets.all(8),
+                    child: pw.Text(revenueStr),
+                  ),
+                ],
+              );
+            }).toList();
+      if (invalidDateTotal > 0) {
+        final invalidRevenueStr = invalidDateTotal
+            .toStringAsFixed(0)
+            .replaceAllMapped(
+              RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+              (Match m) => '${m[1]},',
+            );
+        revenueRows.add(
+          pw.TableRow(
+            children: [
+              pw.Container(
+                padding: const pw.EdgeInsets.all(8),
+                child: pw.Text('Unknown Date'),
+              ),
+              pw.Container(
+                padding: const pw.EdgeInsets.all(8),
+                child: pw.Text(invalidRevenueStr),
+              ),
+            ],
+          ),
+        );
+      }
 
       // Calculate total
       double total = revenueMap.values.fold(0.0, (sum, amount) => sum + amount);
@@ -668,34 +740,8 @@ class DashboardView extends GetView<DashboardController> {
                             ),
                           ],
                         ),
-                        // Data rows - from day 1 to current day
-                        ...List.generate(DateTime.now().day, (index) {
-                          int day = index + 1;
-                          double revenue = revenueMap[day] ?? 0.0;
-                          String revenueStr = revenue > 0
-                              ? revenue
-                                    .toStringAsFixed(0)
-                                    .replaceAllMapped(
-                                      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-                                      (Match m) => '${m[1]},',
-                                    )
-                              : '0';
-
-                          return pw.TableRow(
-                            children: [
-                              pw.Container(
-                                padding: const pw.EdgeInsets.all(8),
-                                child: pw.Text(
-                                  '${day.toString().padLeft(2, '0')} $selectedMonth',
-                                ),
-                              ),
-                              pw.Container(
-                                padding: const pw.EdgeInsets.all(8),
-                                child: pw.Text(revenueStr),
-                              ),
-                            ],
-                          );
-                        }),
+                        // Data rows - show only days where revenue was collected
+                        ...revenueRows,
                       ],
                     ),
                   ],
@@ -844,30 +890,39 @@ class DashboardView extends GetView<DashboardController> {
                           SizedBox(width: 8.w),
                           Obx(
                             () => DropdownButton<String>(
-                              value: controller.selectedMonth.value,
-                              items:
-                                  [
-                                    "October 2025",
-                                    "November 2025",
-                                    "December 2025",
-                                  ].map((String value) {
-                                    return DropdownMenuItem<String>(
-                                      value: value,
-                                      child: Text(
-                                        value,
-                                        style: GoogleFonts.poppins(
-                                          fontSize: 14.sp,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    );
-                                  }).toList(),
+                              value:
+                                  controller.availableMonths.contains(
+                                    controller.selectedMonth.value,
+                                  )
+                                  ? controller.selectedMonth.value
+                                  : null,
+                              items: controller.availableMonths.map((
+                                String value,
+                              ) {
+                                return DropdownMenuItem<String>(
+                                  value: value,
+                                  child: Text(
+                                    value,
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 14.sp,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
                               onChanged: (String? newValue) {
                                 if (newValue != null) {
                                   controller.selectedMonth.value = newValue;
                                   controller.loadDailyRevenue();
                                 }
                               },
+                              hint: Text(
+                                'Select month',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14.sp,
+                                  color: Colors.black54,
+                                ),
+                              ),
                               underline: const SizedBox(),
                               icon: Icon(
                                 Icons.keyboard_arrow_down,

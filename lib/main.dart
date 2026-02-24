@@ -1,13 +1,41 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
+import 'dart:ui';
 import 'core/app_binding.dart';
 import 'core/app_pages.dart';
 import 'core/app_routes.dart';
 import 'core/theme/app_theme.dart';
 
+bool _isKnownWindowsKeyboardAssertion(Object error) {
+  return error is AssertionError &&
+      error.toString().contains(
+        'Attempted to send a key down event when no keys are in keysPressed',
+      );
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  FlutterError.onError = (FlutterErrorDetails details) {
+    if (_isKnownWindowsKeyboardAssertion(details.exception)) {
+      debugPrint(
+        'Ignored known Windows RawKeyboard assertion in debug mode.',
+      );
+      return;
+    }
+    FlutterError.presentError(details);
+  };
+
+  PlatformDispatcher.instance.onError = (Object error, StackTrace stackTrace) {
+    if (_isKnownWindowsKeyboardAssertion(error)) {
+      debugPrint(
+        'Ignored known Windows RawKeyboard platform error in debug mode.',
+      );
+      return true;
+    }
+    return false;
+  };
 
   // Initialize ScreenUtil
   await ScreenUtil.ensureScreenSize();
