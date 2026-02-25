@@ -353,7 +353,7 @@ class ChallanPrintService {
     pw.MemoryImage? bankLogoImage;
 
     try {
-      final schoolLogoData = await rootBundle.load('assets/images/Logo.jpeg');
+      final schoolLogoData = await rootBundle.load('assets/images/new logo.jpeg');
       if (schoolLogoData.buffer.lengthInBytes > 0) {
         schoolLogoImage = pw.MemoryImage(schoolLogoData.buffer.asUint8List());
       }

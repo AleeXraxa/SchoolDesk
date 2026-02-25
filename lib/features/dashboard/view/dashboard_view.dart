@@ -522,7 +522,7 @@ class DashboardView extends GetView<DashboardController> {
 
       // Load logo image
       final logoImage = pw.MemoryImage(
-        (await rootBundle.load('assets/images/Logo.jpeg')).buffer.asUint8List(),
+        (await rootBundle.load('assets/images/new logo.jpeg')).buffer.asUint8List(),
       );
 
       // Get revenue data
